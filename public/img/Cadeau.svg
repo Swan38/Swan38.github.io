@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<svg class="gift" xmlns="http://www.w3.org/2000/svg" width="395.90302" height="395.90302"
+   viewBox="0 0 104.74933 104.74934">
+   <rect class="gift_body" style="fill:#0cb04a;fill-opacity:1;stroke-width:0.281847" width="92.926376"
+      height="82.291306" x="5.9114833" y="16.382658" ry="4.4025655" />
+   <rect class="gift_body" style="fill:#0a7533;fill-opacity:1;stroke-width:0.208479" width="92.926369" height="8.439662"
+      x="5.9114833" y="43.935001" />
+   <rect class="gift_body" style="fill:#0cb04a;fill-opacity:1;stroke-width:0.277934" width="104.7494" height="27.552345"
+      x="-3.8464863e-05" y="16.382658" ry="5.8840208" />
+   <rect class="gift_ribbon"
+      style="fill:#ff3a2f;fill-opacity:1;stroke:#ff3a2f;stroke-width:0.264583;stroke-dasharray:none;stroke-opacity:1"
+      width="20.614998" height="82.291313" x="42.067173" y="16.382658" ry="0" />
+   <path class="gift_ribbon" style="fill:#ff3a2f;fill-opacity:1;stroke-width:0.264583"
+      d="m 42.067172,16.38265 c -23.818802,0 -25.731987,-3.73099 -23.818802,-11.4328595 1.913185,-7.701865 24.642182,-1.13881 34.126278,6.2394495 9.30414,-7.3782595 32.03316,-13.9413145 33.94634,-6.2394495 1.91318,7.7018695 1e-5,11.4328595 -23.63882,11.4328595 z" />
+</svg>

@@ -1,13 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/img/Cadeau.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-  </head>
-  <body>
-    <div id="app"></div>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Livvic:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap"
+        rel="stylesheet" />
+
+    <title>Organisateur de Noël</title>
+</head>
+
+<body>
+    <h1>Organisateur de Noël 🎅</h1>
+
+    <div id="tab_layout">
+        <label class="tab_selection" id="tab_selection_participants" data-src="/img/Cadeau.svg">
+            <img class="tab_selection_image" alt="Participants" src="/img/Cadeau.svg">
+            <input type="radio" name="tab_selection" value="participants" checked />
+        </label>
+        <label class="tab_selection" id="tab_selection_groups" data-src="/img/Cadeau.svg">
+            <img class="tab_selection_image" alt="Groupes" src="/img/Cadeau.svg">
+            <input type="radio" name="tab_selection" value="groups" />
+        </label>
+        <label class="tab_selection" id="tab_selection_history" data-src="/img/Cadeau.svg">
+            <img class="tab_selection_image" alt="Historique" src="/img/Cadeau.svg">
+            <input type="radio" name="tab_selection" value="history" />
+        </label>
+        <label class="tab_selection" id="tab_selection_next_christmas" data-src="/img/Cadeau.svg">
+            <img class="tab_selection_image" alt="Noël prochain !" src="/img/Cadeau.svg">
+            <input type="radio" name="tab_selection" value="next_christmas" />
+        </label>
+        <!-- document.querySelector(`input[name="tab_selection"]:checked`).value -->
+
+        <div class="tab_content" data-name="participants">
+            Establish participants list here
+        </div>
+        <div class="tab_content" data-name="groups">
+            Establish partitipants groups here
+        </div>
+        <div class="tab_content" data-name="history">
+            Establish participants past history here
+        </div>
+        <div class="tab_content" data-name="next_christmas">
+            Generate your next christmas here
+        </div>
+    </div>
+    <!-- <div id="app"></div> -->
     <script type="module" src="/src/main.ts"></script>
-  </body>
+</body>
+
 </html>
