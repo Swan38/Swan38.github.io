@@ -55,7 +55,7 @@ header {
 }
 
 h1 {
-    font-size: 3.2em;
+    font-size: 2.5em;
     line-height: 1.1;
     text-align: center;
 }
@@ -74,6 +74,115 @@ h2 {
         color: #535bf2;
     }
 }
+
+@keyframes appear {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+.disappear {
+    animation: appear .5s ease-in reverse;
+}
+.appear {
+    animation: appear .5s ease-out forwards;
+}
+
+/* #region Tutorial */
+
+#tutorial {
+    margin: auto;
+    padding: 20px;
+    font-size: large;
+    font-weight: 500;
+}
+#tutorial > :first-child {
+    margin-top: 0;
+}
+#tutorial > :last-child {
+    margin-bottom: 0;
+}
+#tutorial ol {
+    padding-left: calc(1.1ch + 1.2ch);
+}
+#tutorial ol > li {
+    padding-left: 1ch;
+}
+#tutorial ol > li::marker {
+    font-size: 1.2em;
+    font-weight: 700;
+}
+
+#start_button {
+    display: block;
+    margin: 1em auto;
+
+    padding: .5em 1em;
+    font-size: larger;
+    font-weight: 700;
+    font-style: italic;
+    outline: none;
+    border: none;
+    border-radius: 100vmax;
+    background-color: var(--green);
+
+    transition: background-color .1s ease-out;
+}
+#start_button:hover {
+    background-color: var(--dark-green);
+}
+
+#file_input_label {
+    display: grid;
+    width: fit-content;
+    margin: 1em auto;
+
+    position: relative;
+
+    padding: .75em;
+    grid-column-gap: .5em;
+    font-size: larger;
+    border-radius: 1em;
+    background-color: var(--green);
+}
+#file_input_label svg {
+    grid-row-start: 1;
+    grid-row-end: 3;
+
+    margin: auto;
+    height: 2em;
+    width: 2em;
+}
+#file_input_label .text_label {
+    grid-row: 1;
+    line-height: 1;
+}
+#file_input_label input[type="file"] {
+    grid-row: 2;
+}
+#file_input_label input[type="file"]::file-selector-button {
+    display: none;
+}
+#file_input_label[hover_drop] {
+    --outline-width: 5px;
+    outline: var(--outline-width) dashed var(--dark-green);
+    outline-offset: calc(var(--outline-width) / -2);
+}
+/* #file_input_label[hover_drop]::after {
+    position: absolute;
+    content: '';
+    top: 2px;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    font-size: inherit;
+    border-radius: calc(1em - 2px);
+    outline: 4px dashed var(--dark-green);
+} */
+
+/* #endregion */
 
 /* #region Tab */
 
@@ -151,7 +260,7 @@ label.tab_selection > svg {
     text-align: left;
 }
 #add_participant_button > svg:first-child {
-    fill: var(--color);
+    /* fill: var(--color); */
     height: 2em;
     width: 2em;
 }
@@ -203,7 +312,7 @@ label.tab_selection > svg {
     height: 2em;
     width: 2em;
 
-    fill: var(--color);
+    /* fill: var(--color); */
 }
 .participant_definition:has(:focus-visible) .delete_participant_button {
     display: block;
