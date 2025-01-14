@@ -1,9 +1,18 @@
+import SVGInjector from "svg-injector"
+
 import './style.css'
+
+import { ParticipantListUI } from "./ui"
+
 // import typescriptLogo from './typescript.svg'
 // import viteLogo from '/vite.svg'
 // import { setupCounter } from './counter.ts'
 
-import SVGInjector from "svg-injector"
+
+SVGInjector(document.querySelectorAll(`img[class="tab_selection_image"]`))
+
+const container_participants: HTMLElement = document.getElementById(`container_participants`)!
+container_participants.insertAdjacentElement('beforeend', new ParticipantListUI().get_elem())
 
 // document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 //   <div>
@@ -24,15 +33,3 @@ import SVGInjector from "svg-injector"
 // `
 
 // setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
-
-SVGInjector(
-    document.querySelectorAll(`img[class="tab_selection_image"]`),
-    {
-        evalScripts: 'once',
-        each: function (svg) {
-            console.log("Injected:", svg)
-        },
-    },
-    console.log
-)
-console.log("SVGInjector constructed")
