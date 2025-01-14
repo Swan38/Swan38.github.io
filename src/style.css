@@ -3,11 +3,18 @@
     line-height: 1.5;
     font-weight: 400;
 
+    --green: #0CB04A;
+    --dark-green: #0A7533;
+    --red: #FF3A2F;
+    --dark-red: #A92921;
+
+
     color-scheme: light dark;
     --color: #213547;
     --background-color: #ffffff;
     --shadow-color: lightgray;
     --disabled-color: lightgray;
+    --focus-accent-color: var(--red);
     color: var(--color);
     background-color: var(--background-color);
 
@@ -15,6 +22,13 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+}
+* {
+    font-family: Livvic, sans-serif;
+}
+::selection {
+    color: var(--dark-red);
+    background-color: var(--green);
 }
 
 a {
@@ -61,6 +75,8 @@ h2 {
     }
 }
 
+/* #region Tab */
+
 #tab_layout {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
@@ -82,7 +98,7 @@ label.tab_selection > svg {
 
 .tab_content {
     grid-row: 2;
-    padding: 1em;
+    margin: 1em;
 }
 .tab_content > :first-child {
     margin-top: 0;
@@ -97,12 +113,11 @@ label.tab_selection > svg {
         grid-column-end: 5;
         pointer-events: none;
         opacity: 0;
-        /* transition: opacity .5s linear; */
     }
-    #tab_layout:has(input[name="tab_selection"][value="participants"]:checked) .tab_content[data-name="participants"],
-    #tab_layout:has(input[name="tab_selection"][value="groups"]:checked) .tab_content[data-name="groups"],
-    #tab_layout:has(input[name="tab_selection"][value="history"]:checked) .tab_content[data-name="history"],
-    #tab_layout:has(input[name="tab_selection"][value="next_christmas"]:checked) .tab_content[data-name="next_christmas"] {
+    #tab_layout:has(input[name="tab_selection"][value="participants"]:checked) .tab_content#container_participants,
+    #tab_layout:has(input[name="tab_selection"][value="groups"]:checked) .tab_content#container_groups,
+    #tab_layout:has(input[name="tab_selection"][value="history"]:checked) .tab_content#container_history,
+    #tab_layout:has(input[name="tab_selection"][value="next_christmas"]:checked) .tab_content#container_next_christmas {
         pointer-events: all;
         opacity: 1;
         transition: opacity .5s ease-in-out;
@@ -117,3 +132,81 @@ label.tab_selection > svg {
         stroke-width: 4 !important;
     }
 }
+/* #endregion */
+
+/* #region Participants */
+
+#add_participant_button {
+    width: -webkit-fill-available;
+    padding: .5em;
+    border-radius: 100vmax;
+    border: none;
+    outline: none;
+    font-size: large;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: .5em;
+    text-align: left;
+}
+#add_participant_button > svg:first-child {
+    fill: var(--color);
+    height: 2em;
+    width: 2em;
+}
+
+.participant_definition {
+    font-size: x-large;
+    font-weight: 600;
+    border-radius: .5em;
+    margin: .5em;
+    outline: 0px solid var(--focus-accent-color);
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.participant_definition input[type="text"] {
+    font-size: inherit;
+    font-weight: inherit;
+    display: block;
+    background: none;
+    border: none;
+    outline: none;
+    margin: 0;
+    padding: .5em;
+
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+.participant_definition:hover,
+.participant_definition:has(:focus-visible) {
+    background-color: rgba(0, 0, 0, .35);
+}
+.participant_definition:has(:focus-visible) {
+    outline-width: 2px;
+}
+.participant_definition .delete_participant_button {
+    display: none;
+    background: none;
+    outline: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    /* height: 2em;
+    width: 2em; */
+}
+.participant_definition .delete_participant_button svg {
+    display: block;
+    margin: .5em;
+    height: 2em;
+    width: 2em;
+
+    fill: var(--color);
+}
+.participant_definition:has(:focus-visible) .delete_participant_button {
+    display: block;
+}
+
+/* #endregion */
