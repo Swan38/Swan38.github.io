@@ -115,8 +115,8 @@ label.tab_selection > svg {
         opacity: 0;
     }
     #tab_layout:has(input[name="tab_selection"][value="participants"]:checked) .tab_content#container_participants,
-    #tab_layout:has(input[name="tab_selection"][value="groups"]:checked) .tab_content#container_groups,
     #tab_layout:has(input[name="tab_selection"][value="history"]:checked) .tab_content#container_history,
+    #tab_layout:has(input[name="tab_selection"][value="groups"]:checked) .tab_content#container_groups,
     #tab_layout:has(input[name="tab_selection"][value="next_christmas"]:checked) .tab_content#container_next_christmas {
         pointer-events: all;
         opacity: 1;
