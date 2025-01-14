@@ -1,6 +1,6 @@
 import SVGInjector from "svg-injector"
 
-import { Participant } from "./data"
+import { Participant, get_stored_participant_list } from "./data"
 
 function element_factory<K extends keyof HTMLElementTagNameMap>(tag_name: K, attributes?: Object, content?: Array<HTMLElement> | HTMLElement | string): HTMLElementTagNameMap[K] {
     const element = document.createElement(tag_name)
@@ -52,6 +52,13 @@ export class ParticipantListUI {
 
         this.#root = element_factory('div', {}, [this.#participants_list, add_participant_button])
         ParticipantListUI.singleton = this
+
+        this.#init_with_stored_participants()
+    }
+
+    #init_with_stored_participants() {
+        for (const stored_participant of get_stored_participant_list())
+            this.#participants_list.insertAdjacentElement('beforeend', new ParticipantUI(stored_participant).get_elem())
     }
 
     get_elem(): HTMLDivElement {
@@ -70,7 +77,7 @@ class ParticipantUI {
     #input: HTMLInputElement
     #participant?: Participant
 
-    constructor() {
+    constructor(participant?: Participant) {
         this.#input = element_factory('input', { type: 'text', placeholder: 'Pseudonyme', size: '1' })
         const delete_image = element_factory('img', { src: '/img/Delete.svg' })
         const delete_button = element_factory('button', { class: 'delete_participant_button', type: 'button' }, svg_inject_later(delete_image))
@@ -90,6 +97,11 @@ class ParticipantUI {
             if (event.detail === this.#participant) this.remove_elem()
         })
         // delete_button.addEventListener('click', () => { this.remove() }) // focusout...
+
+        if (participant !== undefined) {
+            this.#participant = participant
+            this.#input.value = participant.name
+        }
     }
 
     get_elem(): HTMLDivElement {
