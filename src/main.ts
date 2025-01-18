@@ -2,21 +2,72 @@ import SVGInjector from "svg-injector"
 
 import './style.css'
 
-import { ParticipantListUI } from "./ui"
-import { is_data_stored } from "./data"
+import { ParticipantList, ParticipantListRawData } from "./components"
+import { cookie } from "./cookies"
 
 
 SVGInjector(document.querySelectorAll(`img[class="tab_selection_image"]`))
 
-const container_participants: HTMLElement = document.getElementById(`container_participants`)!
-container_participants.insertAdjacentElement('beforeend', new ParticipantListUI().get_elem())
-
+// Get HTML elements
 const tutorial: HTMLDivElement = document.getElementById('tutorial') as HTMLDivElement
 const tab_layout: HTMLDivElement = document.getElementById('tab_layout') as HTMLDivElement
+const container_participants: HTMLElement = document.getElementById(`container_participants`)!
+
+const participant_list = new ParticipantList()
+
+namespace RawData { // Raw data storage
+    const RAW_DATA_KEY = 'noel_data'
+    type RawDataAgregation = { participants: ParticipantListRawData }
+    function write_raw_data(raw_data: RawDataAgregation) {
+        console.log('write_raw_data', raw_data)
+        if (raw_data.participants.length > 0)
+            cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
+        else
+            cookie.erase(RAW_DATA_KEY)
+    }
+    function read_raw_data(): RawDataAgregation | undefined {
+        const cookie_value: string | undefined = cookie.read(RAW_DATA_KEY)
+        if (cookie_value === undefined)
+            return undefined
+        else
+            return JSON.parse(cookie_value)
+    }
+    export function is_raw_data_stored() {
+        return cookie.read(RAW_DATA_KEY) !== undefined
+    }
+
+    function store_raw_data() {
+        const raw_data: RawDataAgregation = {
+            participants: participant_list.get_raw_data()
+        }
+        write_raw_data(raw_data)
+    }
+    let debounce_store_data_timeout: number | undefined = undefined
+    function debounce_store_raw_data() {
+        clearTimeout(debounce_store_data_timeout)
+        debounce_store_data_timeout = setTimeout(() => {
+            debounce_store_data_timeout = undefined
+            store_raw_data()
+        }, 750)
+    }
+
+    export function setup_raw_data() {
+        const raw_data: RawDataAgregation | undefined = read_raw_data()
+        if (raw_data === undefined) return;
+
+        participant_list.set_from_raw_data(raw_data.participants)
+    }
+
+    participant_list.addEventListener('update', debounce_store_raw_data)
+}
+
+container_participants.insertAdjacentElement('beforeend', participant_list.get_elem())
 
 { // Tutorial or main app
-    if (is_data_stored()) // TODO if data stored
-        tutorial.style.display = 'none';
+    if (RawData.is_raw_data_stored()) {
+        tutorial.style.display = 'none'
+        RawData.setup_raw_data()
+    }
     else
         tab_layout.style.display = 'none';
 
