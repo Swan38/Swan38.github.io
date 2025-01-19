@@ -1,4 +1,5 @@
 import SVGInjector from "svg-injector"
+import { v4 as uuid } from 'uuid'
 
 // import { Participant, get_stored_participant_list } from "./data"
 
@@ -33,8 +34,10 @@ function svg_inject_later(svg_element: HTMLImageElement): HTMLImageElement {
     return svg_element
 }
 
+// #region Participants
+
 interface ParticipantListEventMap {
-    "create": Event // CustomEvent<ParticipantList>
+    "create": CustomEvent<Participant>
     "update": Event
     // "delete": Event
 }
@@ -64,12 +67,10 @@ export class ParticipantList {
             add_participant_button
         ])
         this.#root.object = this
-
-        // this.#init_with_stored_participants()
     }
 
     addEventListener<K extends keyof ParticipantListEventMap>(type: K, listener: (this: Participant, ev: ParticipantListEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
-        this.#root.addEventListener(type, listener, options)
+        this.#root.addEventListener(type as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
     }
 
     get participant_list(): Array<Participant> { return this.#participant_list }
@@ -132,17 +133,21 @@ interface ParticipantEventMap {
     "delete": Event // Fired only once
 }
 
-type ParticipantRawData = string
+type ParticipantRawData = {
+    name: string,
+    uuid: string,
+}
 
 class Participant {
     #parent_list: ParticipantList
+    #uuid: string
     #root: HTMLDivElement
     #input: HTMLInputElement
     #first_input_listener?: () => void
-    // #participant?: Participant
 
     constructor(parent_list: ParticipantList) {
         this.#parent_list = parent_list
+        this.#uuid = uuid()
         this.#input = element_factory('input', { type: 'text', placeholder: 'Pseudonyme', size: '1' })
         const delete_image = element_factory('img', { src: '/img/Delete.svg' })
         const delete_button = element_factory('button', { class: 'delete_participant_button', type: 'button' }, svg_inject_later(delete_image))
@@ -189,6 +194,10 @@ class Participant {
     get name() { return this.#input.value }
     set name(value: string) { this.#input.value = value }
 
+    get_uuid(): string {
+        return this.#uuid
+    }
+
     focus() { this.#input.focus() }
 
     remove_elem() {
@@ -197,10 +206,11 @@ class Participant {
     }
 
     get_raw_data() {
-        return this.name
+        return { name: this.name, uuid: this.#uuid }
     }
     set_from_raw_data(raw_data: ParticipantRawData) {
-        this.name = raw_data
+        this.name = raw_data.name
+        this.#uuid = raw_data.uuid
 
         // Events
         if (this.#first_input_listener !== undefined) {
@@ -211,3 +221,225 @@ class Participant {
         }
     }
 }
+
+// #endregion Participants
+
+// #region History
+
+interface ExchangeData {
+    uuid: string,
+    from_uuid: string,
+    to_uuid: string,
+    year: number
+}
+
+export const ALLOWED_YEAR_LIST = ((current_year: number) => { return [...Array(10).keys()].map(index => current_year - index) })(new Date().getFullYear())
+
+export class History {
+    // #participant_list: ParticipantList
+    #root: HTMLDivElement
+    #exchanges: Array<ExchangeData>
+
+    // Views
+    #view_radio: HTMLDivElement
+    #year_view: HistoryViewYear
+    #participant_view: HistoryViewParticipant
+    #views: Array<HistoryView>
+
+    constructor(participant_list: ParticipantList) {
+        // this.#participant_list = participant_list
+
+        this.#exchanges = []
+
+        // View radio
+        function view_radio_option_factory(label: string, value: string, checked: boolean = false): HTMLLabelElement {
+            const label_elem = element_factory('label', { tabindex: '0', unselectable: 'on' }, label)
+            const input_elem = element_factory('input', { type: 'radio', name: 'history_view_radio', value: value, style: 'display: none;' })
+            if (checked)
+                input_elem.checked = true
+            label_elem.appendChild(input_elem)
+            return label_elem
+        }
+        this.#view_radio = element_factory('div', { class: 'view_radio' }, [
+            view_radio_option_factory('Année', 'year', true),
+            view_radio_option_factory('Participant', 'participants'),
+        ])
+
+        this.#year_view = new HistoryViewYear(participant_list)
+
+        this.#participant_view = new HistoryViewParticipant(participant_list)
+
+        this.#views = [this.#year_view, this.#participant_view]
+        { // Views' events
+            const handle_create = (event: CustomEvent<ExchangeData>) => { this.#handle_create(event) }
+            const handle_udpate = (event: CustomEvent<ExchangeData>) => { this.#handle_udpate(event) }
+            const handle_delete = (event: CustomEvent<string>) => { this.#handle_delete(event) }
+            for (const view of this.#views) {
+                view.addEventListener('create', handle_create)
+                view.addEventListener('update', handle_udpate)
+                view.addEventListener('delete', handle_delete)
+            }
+        }
+        this.#root = element_factory('div', { class: 'history' }, [
+            this.#view_radio,
+            this.#year_view.get_elem(),
+            this.#participant_view.get_elem(),
+        ])
+    }
+
+    get_elem() { return this.#root }
+
+    #handle_create(event: CustomEvent<ExchangeData>) { }
+    #handle_udpate(event: CustomEvent<ExchangeData>) { }
+    #handle_delete(event: CustomEvent<string>) { }
+}
+
+interface HistoryViewEventMap {
+    "create": CustomEvent<ExchangeData>
+    "update": CustomEvent<ExchangeData>
+    "delete": CustomEvent<string>
+}
+
+interface HistoryView {
+    get_elem(): HTMLElement;
+    addEventListener<K extends keyof HistoryViewEventMap>(type: K, listener: (this: Participant, ev: HistoryViewEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+    // exchange_created(exchange_data: ExchangeData): void;
+    // exchange_updated(exchange_data: ExchangeData): void;
+    // exchange_deleted(uuid: string): void;
+}
+
+class HistoryViewYear implements HistoryView {
+    #participant_list: ParticipantList
+    #root: HTMLDivElement
+
+    constructor(participant_list: ParticipantList) {
+        this.#participant_list = participant_list
+        this.#root = element_factory('div', { class: 'history_view', id: 'history_view_year' }, ALLOWED_YEAR_LIST.map(year => {
+            const year_button = element_factory('button', { class: 'history_year', type: 'button' }, [
+                element_factory('div', {}, year.toString()),
+                svg_inject_later(element_factory('img', { src: '/img/Add.svg' })),
+            ])
+            year_button.addEventListener('click', () => { this.#add_participant(year, year_button) })
+            return year_button
+        }))
+    }
+
+    get_elem() { return this.#root }
+
+    addEventListener<K extends keyof HistoryViewEventMap>(type: K, listener: (this: Participant, ev: HistoryViewEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+        this.#root.addEventListener(type as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+    }
+
+    #exchange_change_handler(exchange: HTMLDivElement) {
+        const from_uuid: string | undefined = (exchange.querySelector(`select[name="from"] option[value]:checked`) as HTMLOptionElement | null)?.value
+        const to_uuid: string | undefined = (exchange.querySelector(`select[name="to"] option[value]:checked`) as HTMLOptionElement | null)?.value
+        const exchange_is_valid: boolean = from_uuid !== undefined && to_uuid !== undefined && from_uuid != to_uuid
+
+        if (exchange.dataset.uuid === undefined) { // Not create yet
+            if (exchange_is_valid) { // Create
+                exchange.dataset.uuid = uuid()
+                const exchange_data: ExchangeData = {
+                    uuid: exchange.dataset.uuid,
+                    from_uuid: from_uuid!,
+                    to_uuid: to_uuid!,
+                    year: parseInt(exchange.dataset.year as string),
+                }
+                this.#root.dispatchEvent(new CustomEvent('create', { detail: exchange_data }))
+            }
+        } else { // Already created
+            if (exchange_is_valid) { // Update
+                const exchange_data: ExchangeData = {
+                    uuid: exchange.dataset.uuid,
+                    from_uuid: from_uuid!,
+                    to_uuid: to_uuid!,
+                    year: parseInt(exchange.dataset.year as string),
+                }
+                this.#root.dispatchEvent(new CustomEvent('update', { detail: exchange_data }))
+            } else { // Delete
+                this.#root.dispatchEvent(new CustomEvent('delete', { detail: exchange.dataset.uuid }))
+                delete exchange.dataset.uuid
+            }
+        }
+    }
+
+    #exchange_delete_handler(exchange: HTMLDivElement) {
+        const uuid = exchange.dataset.uuid
+        if (uuid !== undefined)
+            this.#root.dispatchEvent(new CustomEvent('delete', { detail: uuid }))
+        exchange.remove()
+    }
+
+    #participant_picker(select_name: string, default_text?: string, selected_uuid?: string): HTMLSelectElement {
+        function participant_option(participant: Participant): HTMLOptionElement {
+            const option_elem = element_factory('option', { value: participant.get_uuid() }, participant.name)
+            participant.addEventListener('update', () => { option_elem.innerText = participant.name })
+            participant.addEventListener('delete', () => { option_elem.remove() }, { once: true })
+            return option_elem
+        }
+
+        const select = element_factory('select', { name: select_name }, this.#participant_list.participant_list.map(participant_option))
+        if (default_text !== undefined)
+            select.insertAdjacentElement('afterbegin', element_factory('option', { selected: '' }, default_text))
+        // Selected
+        if (selected_uuid !== undefined) {
+            const option_to_select = select.querySelector(`option[value="${selected_uuid}"]`)
+            if (option_to_select !== null)
+                (option_to_select as HTMLOptionElement).selected = true
+        }
+        // New participant event
+        this.#participant_list.addEventListener('create', (event: Event) => {
+            const new_participant = (event as CustomEvent<Participant>).detail
+            select.appendChild(participant_option(new_participant))
+        })
+        return select
+    }
+
+    #exchange_elem_factory(data: ExchangeData | number): HTMLDivElement {
+        const from_picker = this.#participant_picker('from', '▾ Offreu·r·se ▾', (data as ExchangeData)?.from_uuid)
+        const to_picker = this.#participant_picker('to', '▾ Receveu·r·se ▾', (data as ExchangeData)?.to_uuid)
+        const delete_button = element_factory('button', { type: 'button' }, svg_inject_later(element_factory('img', { src: '/img/Delete.svg' })))
+
+        const exchange = element_factory('div', { class: 'exchange' }, [
+            from_picker,
+            svg_inject_later(element_factory('img', { src: '/img/Arrow right.svg' })),
+            to_picker,
+            delete_button,
+        ])
+        if (typeof data === 'number') {
+            exchange.dataset.year = data.toString()
+        } else { // data instanceof ExchangeData
+            exchange.dataset.year = data.year.toString()
+            exchange.dataset.uuid = data.uuid
+        }
+
+        // Events
+        const picker_change_handler = () => { this.#exchange_change_handler(exchange) }
+        from_picker.addEventListener('change', picker_change_handler)
+        to_picker.addEventListener('change', picker_change_handler)
+        delete_button.addEventListener('click', () => { this.#exchange_delete_handler(exchange) })
+
+        return exchange
+    }
+
+    #add_participant(year: number, button: HTMLButtonElement) {
+        button.insertAdjacentElement('afterend', this.#exchange_elem_factory(year))
+    }
+}
+
+class HistoryViewParticipant implements HistoryView {
+    #participant_list: ParticipantList
+    #root: HTMLDivElement
+
+    constructor(participant_list: ParticipantList) {
+        this.#participant_list = participant_list
+        this.#root = element_factory('div', { class: 'history_view', id: 'history_view_participant' }, 'Vue participants')
+    }
+
+    get_elem() { return this.#root }
+
+    addEventListener<K extends keyof HistoryViewEventMap>(type: K, listener: (this: Participant, ev: HistoryViewEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+        this.#root.addEventListener(type as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+    }
+}
+
+// #endregion History

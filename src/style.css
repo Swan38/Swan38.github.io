@@ -1,7 +1,11 @@
+/* #region Page */
+
 :root {
     font-family: Livvic, sans-serif;
     line-height: 1.5;
     font-weight: 400;
+
+    --gap: .5em;
 
     --green: #0CB04A;
     --dark-green: #0A7533;
@@ -12,6 +16,7 @@
     color-scheme: light dark;
     --color: #213547;
     --background-color: #ffffff;
+    --secondary-background-color: lightgray;
     --shadow-color: lightgray;
     --disabled-color: lightgray;
     --focus-accent-color: var(--red);
@@ -25,7 +30,20 @@
 }
 * {
     font-family: Livvic, sans-serif;
+    color: var(--color);
 }
+
+*[unselectable] {
+    /* Safari */
+    -webkit-user-select: none;
+    /* Firefox */
+    -moz-user-select: none;
+    /* IE10+/Edge */
+    -ms-user-select: none;
+    /* Standard */
+    user-select: none;
+}
+
 ::selection {
     color: var(--dark-red);
     background-color: var(--green);
@@ -57,6 +75,7 @@ header {
 h1 {
     font-size: 2.5em;
     line-height: 1.1;
+    margin: .67em;
     text-align: center;
 }
 h2 {
@@ -69,6 +88,7 @@ h2 {
         --background-color: #242424;
         --shadow-color: black;
         --disabled-color: darkgrey;
+        --secondary-background-color: #2d413b;
     }
     a:hover {
         color: #535bf2;
@@ -89,6 +109,8 @@ h2 {
 .appear {
     animation: appear .5s ease-out forwards;
 }
+
+/* #endregion Page */
 
 /* #region Tutorial */
 
@@ -161,6 +183,7 @@ h2 {
 }
 #file_input_label input[type="file"] {
     grid-row: 2;
+    width: 100%;
 }
 #file_input_label input[type="file"]::file-selector-button {
     display: none;
@@ -182,7 +205,7 @@ h2 {
     outline: 4px dashed var(--dark-green);
 } */
 
-/* #endregion */
+/* #endregion Tutorial */
 
 /* #region Tab */
 
@@ -241,7 +264,7 @@ label.tab_selection > svg {
         stroke-width: 4 !important;
     }
 }
-/* #endregion */
+/* #endregion Tab */
 
 /* #region Participants */
 
@@ -258,6 +281,7 @@ label.tab_selection > svg {
     align-items: center;
     gap: .5em;
     text-align: left;
+    background-color: var(--secondary-background-color);
 }
 #add_participant_button > svg:first-child {
     /* fill: var(--color); */
@@ -281,6 +305,7 @@ label.tab_selection > svg {
     font-weight: inherit;
     display: block;
     background: none;
+    color: var(--color);
     border: none;
     outline: none;
     margin: 0;
@@ -318,4 +343,124 @@ label.tab_selection > svg {
     display: block;
 }
 
-/* #endregion */
+/* #endregion Participants */
+
+/* #region History */
+
+.history .view_radio {
+    display: flex;
+    flex-direction: row;
+    font-size: large;
+    margin: .5em 0;
+    padding: calc(var(--gap) / 2);
+    border-radius: var(--gap);
+    background-color: var(--secondary-background-color);
+}
+.history .view_radio > * {
+    flex-basis: 100%;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    padding: calc(var(--gap) / 2);
+}
+.history .view_radio > :has(:checked)::before {
+    content: "";
+    background-color: var(--background-color);
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: -1;
+    border-radius: calc(var(--gap) / 2);
+
+    animation: surprised-appear .1s ease-out;
+}
+@keyframes surprised-appear {
+    from {
+        opacity: .2;
+        scale: .9;
+    }
+}
+
+.history:has(> .view_radio input[name="history_view_radio"][value="year"]:not(:checked)) #history_view_year,
+.history:has(> .view_radio input[name="history_view_radio"][value="participants"]:not(:checked)) #history_view_participant {
+    display: none;
+}
+
+/* #history_view_year {} */
+#history_view_year > button.history_year {
+    border: none;
+    outline: none;
+    background: none;
+    width: 100%;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: .25em;
+    padding: .75em .25em .25em;
+
+    font-size: large;
+    border-bottom: .2em solid var(--secondary-background-color);
+}
+#history_view_year > button.history_year > svg {
+    /* font-size: large; */
+    height: 1em;
+    width: 1em;
+}
+.history .exchange {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.history .exchange:not([data-uuid]) {
+    opacity: .75;
+}
+.history .exchange:hover {
+    background-color: var(--secondary-background-color);
+}
+.history .exchange > svg {
+    font-size: large;
+    height: 1em;
+    width: 1em;
+    /* padding: .125em; */
+    flex-shrink: 0;
+}
+.history .exchange > button {
+    flex-shrink: 0;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    margin: 0;
+}
+.history .exchange > button > svg {
+    font-size: large;
+    height: 1em;
+    width: 1em;
+    padding: .125em;
+}
+.history .exchange > select {
+    flex-basis: 100%;
+    flex-shrink: 1;
+    display: block;
+
+    background: none;
+    border: none;
+    outline: none;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    font-weight: 500;
+}
+.history .exchange > select > option {
+    background-color: var(--background-color);
+    font-weight: inherit;
+}
+.history .exchange > select > option:not([value]) {
+    display: none;
+}
+
+/* #endregion History */
