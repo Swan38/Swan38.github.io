@@ -2,7 +2,7 @@ import SVGInjector from "svg-injector"
 
 import './style.css'
 
-import { ParticipantList, ParticipantListRawData } from "./components"
+import { ParticipantList, ParticipantListRawData, History } from "./components"
 import { cookie } from "./cookies"
 
 
@@ -11,15 +11,19 @@ SVGInjector(document.querySelectorAll(`img[class="tab_selection_image"]`))
 // Get HTML elements
 const tutorial: HTMLDivElement = document.getElementById('tutorial') as HTMLDivElement
 const tab_layout: HTMLDivElement = document.getElementById('tab_layout') as HTMLDivElement
-const container_participants: HTMLElement = document.getElementById(`container_participants`)!
 
+const container_participants: HTMLElement = document.getElementById(`container_participants`)!
 const participant_list = new ParticipantList()
+container_participants.insertAdjacentElement('beforeend', participant_list.get_elem())
+
+const container_history: HTMLElement = document.getElementById(`container_history`)!
+const history = new History(participant_list)
+container_history.insertAdjacentElement('beforeend', history.get_elem())
 
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'
     type RawDataAgregation = { participants: ParticipantListRawData }
     function write_raw_data(raw_data: RawDataAgregation) {
-        console.log('write_raw_data', raw_data)
         if (raw_data.participants.length > 0)
             cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
         else
@@ -60,8 +64,6 @@ namespace RawData { // Raw data storage
 
     participant_list.addEventListener('update', debounce_store_raw_data)
 }
-
-container_participants.insertAdjacentElement('beforeend', participant_list.get_elem())
 
 { // Tutorial or main app
     if (RawData.is_raw_data_stored()) {
