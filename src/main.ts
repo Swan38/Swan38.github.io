@@ -2,7 +2,7 @@ import SVGInjector from "svg-injector"
 
 import './style.css'
 
-import { ParticipantList, ParticipantListRawData, History } from "./components"
+import { ParticipantList, ParticipantListRawData, History, HistoryRawData } from "./components"
 import { cookie } from "./cookies"
 
 
@@ -22,7 +22,10 @@ container_history.insertAdjacentElement('beforeend', history.get_elem())
 
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'
-    type RawDataAgregation = { participants: ParticipantListRawData }
+    type RawDataAgregation = {
+        participants: ParticipantListRawData
+        history: HistoryRawData
+    }
     function write_raw_data(raw_data: RawDataAgregation) {
         if (raw_data.participants.length > 0)
             cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
@@ -42,17 +45,18 @@ namespace RawData { // Raw data storage
 
     function store_raw_data() {
         const raw_data: RawDataAgregation = {
-            participants: participant_list.get_raw_data()
+            participants: participant_list.get_raw_data(),
+            history: history.get_raw_data(),
         }
         write_raw_data(raw_data)
     }
     let debounce_store_data_timeout: number | undefined = undefined
-    function debounce_store_raw_data() {
+    function debounce_store_raw_data(timeout_ms: number = 750) {
         clearTimeout(debounce_store_data_timeout)
         debounce_store_data_timeout = setTimeout(() => {
             debounce_store_data_timeout = undefined
             store_raw_data()
-        }, 750)
+        }, timeout_ms)
     }
 
     export function setup_raw_data() {
@@ -60,9 +64,11 @@ namespace RawData { // Raw data storage
         if (raw_data === undefined) return;
 
         participant_list.set_from_raw_data(raw_data.participants)
+        history.set_from_raw_data(raw_data.history)
     }
 
-    participant_list.addEventListener('update', debounce_store_raw_data)
+    participant_list.addEventListener('update', () => { debounce_store_raw_data() })
+    history.addEventListener('update', () => { debounce_store_raw_data(0) })
 }
 
 { // Tutorial or main app

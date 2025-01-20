@@ -384,12 +384,12 @@ label.tab_selection > svg {
 }
 
 .history:has(> .view_radio input[name="history_view_radio"][value="year"]:not(:checked)) #history_view_year,
-.history:has(> .view_radio input[name="history_view_radio"][value="participants"]:not(:checked)) #history_view_participant {
+.history:has(> .view_radio input[name="history_view_radio"][value="giver"]:not(:checked)) #history_view_giver {
     display: none;
 }
 
 /* #history_view_year {} */
-#history_view_year > button.history_year {
+.history_view > button.history_new_exchange_button {
     border: none;
     outline: none;
     background: none;
@@ -404,7 +404,7 @@ label.tab_selection > svg {
     font-size: large;
     border-bottom: .2em solid var(--secondary-background-color);
 }
-#history_view_year > button.history_year > svg {
+.history_view > button.history_new_exchange_button > svg {
     /* font-size: large; */
     height: 1em;
     width: 1em;
@@ -454,6 +454,7 @@ label.tab_selection > svg {
     -moz-appearance: none;
     appearance: none;
     font-weight: 500;
+    /* padding: 0 1ch; */
 }
 .history .exchange > select > option {
     background-color: var(--background-color);
@@ -461,6 +462,10 @@ label.tab_selection > svg {
 }
 .history .exchange > select > option:not([value]) {
     display: none;
+}
+
+.history .exchange > select[name="year"] {
+    flex-basis: 33%;
 }
 
 /* #endregion History */
