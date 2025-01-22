@@ -2,7 +2,7 @@ import SVGInjector from "svg-injector"
 
 import './style.css'
 
-import { ParticipantList, ParticipantListRawData, History, HistoryRawData } from "./components"
+import { ParticipantList, ParticipantListRawData, History, HistoryRawData, Group } from "./components"
 import { cookie } from "./cookies"
 
 
@@ -19,6 +19,10 @@ container_participants.insertAdjacentElement('beforeend', participant_list.get_e
 const container_history: HTMLElement = document.getElementById(`container_history`)!
 const history = new History(participant_list)
 container_history.insertAdjacentElement('beforeend', history.get_elem())
+
+const container_groups: HTMLElement = document.getElementById(`container_groups`)!
+const group_list = new Group.GroupList(participant_list)
+container_groups.insertAdjacentElement('beforeend', group_list.get_elem())
 
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'
@@ -89,7 +93,7 @@ namespace RawData { // Raw data storage
     }
 }
 
-{ // Frop file area
+{ // Drop file area
     const drop_area: HTMLLabelElement = document.getElementById('file_input_label') as HTMLLabelElement
     const drop_input: HTMLInputElement = drop_area.querySelector('input[type="file"]')!
 

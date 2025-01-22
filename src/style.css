@@ -218,6 +218,7 @@ h2 {
 label.tab_selection {
     grid-row: 1;
     text-align: center;
+    line-height: 1;
 }
 label.tab_selection > input[name="tab_selection"] {
     display: none;
@@ -230,7 +231,7 @@ label.tab_selection > svg {
 
 .tab_content {
     grid-row: 2;
-    margin: 1em;
+    margin: 0 1em;
 }
 .tab_content > :first-child {
     margin-top: 0;
@@ -469,3 +470,61 @@ label.tab_selection > svg {
 }
 
 /* #endregion History */
+
+/* #region Groups */
+
+.group_icon {
+    position: relative;
+    --size: 36px;
+    height: var(--size);
+    width: var(--size);
+}
+.group_icon > svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: inherit;
+    width: inherit;
+}
+.group_icon.mutual_exclusion_group_icon > svg:nth-child(2),
+.group_icon.one_way_exclusion_group_icon > svg:nth-child(2) {
+    transition: transform .2s ease-out;
+}
+.group_icon.mutual_exclusion_group_icon:hover > svg:nth-child(2),
+.group_icon.one_way_exclusion_group_icon:hover > svg:nth-child(2) {
+    transform: rotate(90deg);
+}
+.group_icon.linked_group_icon > svg {
+    transition: transform .2s ease-out;
+}
+.group_icon.linked_group_icon:hover > svg {
+    transform: rotate(180deg);
+}
+
+.new_group_section .new_group_btn_list_label {
+    text-align: center;
+    font-size: large;
+    margin: 0 .5em .5em;
+}
+
+.new_group_section .new_group_btn_list {
+    display: flex;
+    flex-direction: row;
+    font-size: large;
+    margin: .5em;
+    gap: .5em;
+    justify-content: center;
+}
+
+.new_group_section .new_group_btn_list .new_group_button {
+    border: none;
+    outline: none;
+    background: var(--secondary-background-color);
+    font-size: large;
+    padding: .5em;
+    margin: 0;
+    border-radius: .5em;
+    border-radius: 100vmax;
+}
+
+/* #endregion Groups */

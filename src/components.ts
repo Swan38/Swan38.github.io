@@ -694,4 +694,124 @@ class HistoryViewParticipant implements HistoryView {
     }
 }
 
+export namespace Group {
+
+    export class GroupList {
+        #participant_list: ParticipantList
+        #root: HTMLDivElement
+
+        constructor(participant_list: ParticipantList) {
+            this.#participant_list = participant_list
+
+            const new_group_section = this.#new_group_section()
+
+            this.#root = element_factory('div', { class: 'group_list' }, new_group_section)
+        }
+
+        get_elem() { return this.#root }
+
+        #new_group_section(): HTMLDivElement {
+            const new_mutual_btn = element_factory('button', { class: 'new_group_button', type: 'button' }, MutualExclusion.get_icon())
+            const new_oneway_btn = element_factory('button', { class: 'new_group_button', type: 'button' }, OneWayExclusion.get_icon())
+            const new_linked_btn = element_factory('button', { class: 'new_group_button', type: 'button' }, Linked.get_icon())
+
+            // On clicks
+            new_mutual_btn.addEventListener('click', () => { this.#new_group_mutual() })
+            new_oneway_btn.addEventListener('click', () => { this.#new_group_oneway() })
+            new_linked_btn.addEventListener('click', () => { this.#new_group_linked() })
+
+            return element_factory('div', { class: 'new_group_section' }, [
+                element_factory('div', { class: 'new_group_btn_list_label' }, 'Ajouter un groupe :'),
+                element_factory('div', { class: 'new_group_btn_list' }, [
+                    new_mutual_btn,
+                    new_oneway_btn,
+                    new_linked_btn,
+                ]),
+            ])
+        }
+
+        #new_group_mutual() {
+            // TODO
+            const new_group = new MutualExclusion()
+            this.#root.insertAdjacentElement('beforeend', new_group.get_elem())
+        }
+        #new_group_oneway() {
+            // TODO
+            const new_group = new OneWayExclusion()
+            this.#root.insertAdjacentElement('beforeend', new_group.get_elem())
+        }
+        #new_group_linked() {
+            // TODO
+            const new_group = new Linked()
+            this.#root.insertAdjacentElement('beforeend', new_group.get_elem())
+        }
+    }
+
+    interface GroupTypeEventMap {
+        "update": Event
+        "delete": Event
+    }
+
+    interface GroupType {
+        readonly type_key: string
+        get_elem(): HTMLElement;
+        addEventListener<K extends keyof GroupTypeEventMap>(type: K, listener: (this: Participant, ev: GroupTypeEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
+        // get_icon(): HTMLElement; // incompatible with static
+    }
+
+    class MutualExclusion implements GroupType {
+        #root: HTMLDivElement
+        constructor() {
+            this.#root = element_factory('div', {}, 'MutualExclusion')
+        }
+        get_elem(): HTMLDivElement { return this.#root }
+        get type_key() { return 'mutual_exclusion' }
+        addEventListener<K extends keyof GroupTypeEventMap>(type: K, listener: (this: Participant, ev: GroupTypeEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+            this.#root.addEventListener(type as unknown as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+        }
+        static get_icon(): HTMLDivElement {
+            return element_factory('div', { class: 'group_icon mutual_exclusion_group_icon' }, [
+                svg_inject_later(element_factory('img', { src: '/img/Group mutual exclusion.svg' })),
+                svg_inject_later(element_factory('img', { src: '/img/Not.svg' })),
+            ])
+        }
+    }
+
+    class OneWayExclusion implements GroupType {
+        #root: HTMLDivElement
+        constructor() {
+            this.#root = element_factory('div', {}, 'OneWayExclusion')
+        }
+        get_elem(): HTMLDivElement { return this.#root }
+        get type_key() { return 'one_way_exclusion' }
+        addEventListener<K extends keyof GroupTypeEventMap>(type: K, listener: (this: Participant, ev: GroupTypeEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+            this.#root.addEventListener(type as unknown as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+        }
+        static get_icon(): HTMLDivElement {
+            return element_factory('div', { class: 'group_icon one_way_exclusion_group_icon' }, [
+                svg_inject_later(element_factory('img', { src: '/img/One way exclusion.svg' })),
+                svg_inject_later(element_factory('img', { src: '/img/Not.svg' })),
+            ])
+        }
+    }
+
+    class Linked implements GroupType {
+        #root: HTMLDivElement
+        constructor() {
+            this.#root = element_factory('div', {}, 'Linked')
+        }
+        get_elem(): HTMLDivElement { return this.#root }
+        get type_key() { return 'linked' }
+        addEventListener<K extends keyof GroupTypeEventMap>(type: K, listener: (this: Participant, ev: GroupTypeEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+            this.#root.addEventListener(type as unknown as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+        }
+        static get_icon(): HTMLDivElement {
+            return element_factory('div', { class: 'group_icon linked_group_icon' }, [
+                svg_inject_later(element_factory('img', { src: '/img/Linked.svg' })),
+            ])
+        }
+    }
+
+}
+
 // #endregion History
