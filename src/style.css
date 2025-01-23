@@ -44,6 +44,10 @@
     user-select: none;
 }
 
+/* *:focus-visible {
+    outline: 2px solid var(--focus-accent-color);
+} */
+
 ::selection {
     color: var(--dark-red);
     background-color: var(--green);
@@ -108,6 +112,28 @@ h2 {
 }
 .appear {
     animation: appear .5s ease-out forwards;
+}
+
+select {
+    background: none;
+    border: none;
+    text-align: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    font-weight: 500;
+}
+select > option {
+    background-color: var(--background-color);
+    font-weight: inherit;
+}
+select > option:not([value]),
+select > option[data-excluded] {
+    display: none;
+}
+
+button > svg {
+    vertical-align: middle;
 }
 
 /* #endregion Page */
@@ -319,6 +345,7 @@ label.tab_selection > svg {
 }
 .participant_definition:has(:focus-visible) {
     outline-width: 2px;
+    overflow: hidden;
 }
 .participant_definition .delete_participant_button {
     display: none;
@@ -337,8 +364,14 @@ label.tab_selection > svg {
 
     /* fill: var(--color); */
 }
-.participant_definition:has(:focus-visible) .delete_participant_button {
+.participant_definition:focus-within .delete_participant_button {
     display: block;
+    animation: right-arrive-bin .2s ease-out forwards;
+}
+@keyframes right-arrive-bin {
+    from {
+        transform: translateX(calc(100% - .5em));
+    }
 }
 
 /* #endregion Participants */
@@ -480,19 +513,18 @@ label.tab_selection > svg {
     height: inherit;
     width: inherit;
 }
-.group_icon.mutual_exclusion_group_icon > svg:nth-child(2),
-.group_icon.one_way_exclusion_group_icon > svg:nth-child(2) {
+/* .group_icon.mutual_exclusion_group_icon:hover > svg:nth-child(1) {
+    transform: rotate(-120deg);
     transition: transform .2s ease-out;
-}
+} */
 .group_icon.mutual_exclusion_group_icon:hover > svg:nth-child(2),
 .group_icon.one_way_exclusion_group_icon:hover > svg:nth-child(2) {
     transform: rotate(90deg);
-}
-.group_icon.linked_group_icon > svg {
     transition: transform .2s ease-out;
 }
 .group_icon.linked_group_icon:hover > svg {
     transform: rotate(180deg);
+    transition: transform .2s ease-out;
 }
 
 .new_group_section .new_group_btn_list_label {
@@ -518,6 +550,63 @@ label.tab_selection > svg {
     margin: 0;
     border-radius: .5em;
     border-radius: 100vmax;
+}
+
+.group {
+    font-size: large;
+    margin: .5em 0;
+    padding: .5em;
+    border-radius: 1em;
+    background: var(--secondary-background-color);
+}
+.group > .group_header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: .5em;
+}
+.group > .group_header > :nth-child(2) {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+.group > .group_header > button {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
+}
+.group > select[name^="add_member"] {
+    width: 100%;
+}
+
+.member_list {
+    background: var(--background-color);
+    border-radius: .5em;
+    overflow: hidden;
+}
+.member_list:not(:has(*)) {
+    display: none;
+}
+.member_list > * {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: .5em;
+}
+
+.member_list > *:hover {
+    background-color: rgba(0, 0, 0, .35);
+}
+.member_list > * > :first-child {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+.member_list > * > button {
+    background: none;
+    border: none;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
 }
 
 /* #endregion Groups */
