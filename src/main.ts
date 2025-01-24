@@ -2,7 +2,7 @@ import SVGInjector from "svg-injector"
 
 import './style.css'
 
-import { ParticipantList, ParticipantListRawData, History, HistoryRawData, Group } from "./components"
+import { Participant, History, Group } from "./components"
 import { cookie } from "./cookies"
 
 
@@ -13,22 +13,22 @@ const tutorial: HTMLDivElement = document.getElementById('tutorial') as HTMLDivE
 const tab_layout: HTMLDivElement = document.getElementById('tab_layout') as HTMLDivElement
 
 const container_participants: HTMLElement = document.getElementById(`container_participants`)!
-const participant_list = new ParticipantList()
+const participant_list = new Participant.ParticipantEditor()
 container_participants.insertAdjacentElement('beforeend', participant_list.get_elem())
 
 const container_history: HTMLElement = document.getElementById(`container_history`)!
-const history = new History(participant_list)
+const history = new History.HistoryEditor(participant_list)
 container_history.insertAdjacentElement('beforeend', history.get_elem())
 
 const container_groups: HTMLElement = document.getElementById(`container_groups`)!
-const group_list = new Group.GroupList(participant_list)
+const group_list = new Group.GroupEditor(participant_list)
 container_groups.insertAdjacentElement('beforeend', group_list.get_elem())
 
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'
     type RawDataAgregation = {
-        participants: ParticipantListRawData
-        history: HistoryRawData
+        participants: Participant.ParticipantListRawData
+        history: History.HistoryRawData
         groups: Group.GroupListRawData
     }
     function write_raw_data(raw_data: RawDataAgregation) {
