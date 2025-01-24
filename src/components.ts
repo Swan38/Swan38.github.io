@@ -728,7 +728,7 @@ export namespace Group {
     interface GroupListEventMap {
         "update": Event
     }
-    type GroupListRawData = Array<GroupRawData>
+    export type GroupListRawData = Array<GroupRawData>
 
     export class GroupList {
         #participant_list: ParticipantList
@@ -756,9 +756,9 @@ export namespace Group {
             const new_linked_btn = element_factory('button', { class: 'new_group_button', type: 'button', title: Linked.get_short_text() }, Linked.get_icon())
 
             // On clicks
-            new_mutual_btn.addEventListener('click', () => { this.#new_group_mutual() })
-            new_oneway_btn.addEventListener('click', () => { this.#new_group_oneway() })
-            new_linked_btn.addEventListener('click', () => { this.#new_group_linked() })
+            new_mutual_btn.addEventListener('click', () => { this.#new_blank_group_mutual() })
+            new_oneway_btn.addEventListener('click', () => { this.#new_blank_group_oneway() })
+            new_linked_btn.addEventListener('click', () => { this.#new_blank_group_linked() })
 
             return element_factory('div', { class: 'new_group_section' }, [
                 element_factory('div', { class: 'new_group_btn_list_label' }, 'Ajouter un groupe :'),
@@ -770,7 +770,7 @@ export namespace Group {
             ])
         }
 
-        #new_group(new_group: GroupType) {
+        #insert_and_listen_group(new_group: GroupType) {
             // Elem
             this.#root.insertAdjacentElement('beforeend', new_group.get_elem())
 
@@ -792,18 +792,40 @@ export namespace Group {
             })
         }
 
-        #new_group_mutual() {
-            this.#new_group(new MutualExclusion(this.#participant_list))
-        }
-        #new_group_oneway() {
-            this.#new_group(new OneWayExclusion(this.#participant_list))
+        #new_blank_group_mutual() { this.#insert_and_listen_group(new MutualExclusion(this.#participant_list)) }
+        #new_blank_group_oneway() { this.#insert_and_listen_group(new OneWayExclusion(this.#participant_list)) }
+        #new_blank_group_linked() { this.#insert_and_listen_group(new Linked(this.#participant_list)) }
 
-        }
-        #new_group_linked() {
-            this.#new_group(new Linked(this.#participant_list))
-        }
+        get_raw_data(): GroupListRawData { return this.#groups_raw_data }
+        set_from_raw_data(raw_data: GroupListRawData) {
+            for (const elem of Array.from(this.#root.children).slice(1))
+                elem.remove()
+            for (const group_data of raw_data) {
+                switch (group_data.type_key) {
+                    case 'mutual_exclusion': {
+                        const new_group = new MutualExclusion(this.#participant_list)
+                        new_group.set_from_raw_data(group_data.raw_data as MutualExclusionGroupRawData)
+                        this.#insert_and_listen_group(new_group)
+                        break;
+                    }
+                    case 'one_way_exclusion': {
+                        const new_group = new OneWayExclusion(this.#participant_list)
+                        new_group.set_from_raw_data(group_data.raw_data as OneWayExclusionGroupRawData)
+                        this.#insert_and_listen_group(new_group)
+                        break;
+                    }
+                    case 'linked': {
+                        const new_group = new Linked(this.#participant_list)
+                        new_group.set_from_raw_data(group_data.raw_data as LinkedGroupRawData)
+                        this.#insert_and_listen_group(new_group)
+                        break;
+                    }
 
-        get group_list_raw_data() { return this.#groups_raw_data }
+                    default:
+                        throw new Error(`Unimplemented group key "${group_data.type_key}"`)
+                }
+            }
+        }
     }
 
     interface GroupTypeEventMap {
@@ -818,6 +840,7 @@ export namespace Group {
         // get_icon(): HTMLElement; // incompatible with static
         // get_short_text(): string; // incompatible with static
         get_raw_data(): AnyGroupRawData;
+        set_from_raw_data(raw_data: AnyGroupRawData): void;
     }
 
     type GroupRawData = {
@@ -859,9 +882,7 @@ export namespace Group {
                 this.#root.remove()
             })
             this.#add_member_select.addEventListener('change', () => {
-                this.#add_member(this.#participant_list.get_participant_by_uuid(this.#add_member_select.value)!);
-                (this.#add_member_select.querySelector(`option[value="${this.#add_member_select.value}"]`) as HTMLOptionElement).dataset.excluded = '';
-                (this.#add_member_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+                this.#add_member_by_uuid(this.#add_member_select.value)
             })
         }
         get_elem(): HTMLDivElement { return this.#root }
@@ -877,6 +898,11 @@ export namespace Group {
         }
         static get_short_text(): string { return 'Exclusion mutuelle' }
 
+        #add_member_by_uuid(uuid: string) {
+            this.#add_member(this.#participant_list.get_participant_by_uuid(uuid)!);
+            (this.#add_member_select.querySelector(`option[value="${uuid}"]`) as HTMLOptionElement).dataset.excluded = '';
+            (this.#add_member_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+        }
         #add_member(participant: Participant) {
             const name_elem = element_factory('div', undefined, participant.name)
             const remove_member_btn = element_factory('button', { type: 'button', title: `Retirer ${participant.name} du groupe` }, svg_factory('/img/Delete.svg'))
@@ -901,6 +927,11 @@ export namespace Group {
         }
 
         get_raw_data(): MutualExclusionGroupRawData { return Array.from(this.#member_list.children, elem => (elem as HTMLElement).dataset.uuid!) }
+        set_from_raw_data(raw_data: MutualExclusionGroupRawData): void {
+            this.#member_list.innerHTML = ''
+            for (const member_uuid of raw_data.reverse())
+                this.#add_member_by_uuid(member_uuid)
+        }
     }
 
     class OneWayExclusion implements GroupType {
@@ -919,9 +950,9 @@ export namespace Group {
                 element_factory('div', {}, OneWayExclusion.get_short_text()),
                 delete_button,
             ])
-            this.#add_member_from_select = this.#participant_list.participant_picker_factory('add_member_from', undefined, '▾ Ajouter un·e participant·e ▾')
+            this.#add_member_from_select = this.#participant_list.participant_picker_factory('add_member_from', undefined, '▾ Ajouter un·e offreu·r·se ▾')
             this.#member_from_list = element_factory('div', { class: 'member_list' })
-            this.#add_member_to_select = this.#participant_list.participant_picker_factory('add_member_to', undefined, '▾ Ajouter un·e participant·e ▾')
+            this.#add_member_to_select = this.#participant_list.participant_picker_factory('add_member_to', undefined, '▾ Ajouter un·e receveu·r·se ▾')
             this.#member_to_list = element_factory('div', { class: 'member_list' })
 
             this.#root = element_factory('div', { class: 'oneway_exclusion_group group' }, [
@@ -938,14 +969,10 @@ export namespace Group {
                 this.#root.remove()
             })
             this.#add_member_from_select.addEventListener('change', () => {
-                this.#add_member_from(this.#participant_list.get_participant_by_uuid(this.#add_member_from_select.value)!);
-                (this.#add_member_from_select.querySelector(`option[value="${this.#add_member_from_select.value}"]`) as HTMLOptionElement).dataset.excluded = '';
-                (this.#add_member_from_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+                this.#add_member_from_by_uuid(this.#add_member_from_select.value)
             })
             this.#add_member_to_select.addEventListener('change', () => {
-                this.#add_member_to(this.#participant_list.get_participant_by_uuid(this.#add_member_to_select.value)!);
-                (this.#add_member_to_select.querySelector(`option[value="${this.#add_member_to_select.value}"]`) as HTMLOptionElement).dataset.excluded = '';
-                (this.#add_member_to_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+                this.#add_member_to_by_uuid(this.#add_member_to_select.value)
             })
         }
         get_elem(): HTMLDivElement { return this.#root }
@@ -961,6 +988,11 @@ export namespace Group {
         }
         static get_short_text(): string { return 'Exclusion à sens unique' }
 
+        #add_member_from_by_uuid(uuid: string) {
+            this.#add_member_from(this.#participant_list.get_participant_by_uuid(uuid)!);
+            (this.#add_member_from_select.querySelector(`option[value="${uuid}"]`) as HTMLOptionElement).dataset.excluded = '';
+            (this.#add_member_from_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+        }
         #add_member_from(participant: Participant) {
             const name_elem = element_factory('div', undefined, participant.name)
             const remove_member_btn = element_factory('button', { type: 'button', title: `Retirer ${participant.name} du groupe` }, svg_factory('/img/Delete.svg'))
@@ -982,6 +1014,11 @@ export namespace Group {
             delete (this.#add_member_from_select.querySelector(`option[value="${participant_element.dataset.uuid}"]`) as HTMLOptionElement | null)?.dataset.excluded
             participant_element.remove()
             this.#root.dispatchEvent(new Event('update'))
+        }
+        #add_member_to_by_uuid(uuid: string) {
+            this.#add_member_to(this.#participant_list.get_participant_by_uuid(uuid)!);
+            (this.#add_member_to_select.querySelector(`option[value="${uuid}"]`) as HTMLOptionElement).dataset.excluded = '';
+            (this.#add_member_to_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
         }
         #add_member_to(participant: Participant) {
             const name_elem = element_factory('div', undefined, participant.name)
@@ -1011,6 +1048,16 @@ export namespace Group {
                 from: Array.from(this.#member_from_list.children, elem => (elem as HTMLElement).dataset.uuid!),
                 to: Array.from(this.#member_to_list.children, elem => (elem as HTMLElement).dataset.uuid!),
             }
+        }
+        set_from_raw_data(raw_data: OneWayExclusionGroupRawData): void {
+            // From
+            this.#member_from_list.innerHTML = ''
+            for (const member_uuid of raw_data.from.reverse())
+                this.#add_member_from_by_uuid(member_uuid)
+            // To
+            this.#member_to_list.innerHTML = ''
+            for (const member_uuid of raw_data.to.reverse())
+                this.#add_member_to_by_uuid(member_uuid)
         }
     }
 
@@ -1043,9 +1090,7 @@ export namespace Group {
                 this.#root.remove()
             })
             this.#add_member_select.addEventListener('change', () => {
-                this.#add_member(this.#participant_list.get_participant_by_uuid(this.#add_member_select.value)!);
-                (this.#add_member_select.querySelector(`option[value="${this.#add_member_select.value}"]`) as HTMLOptionElement).dataset.excluded = '';
-                (this.#add_member_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+                this.#add_member_by_uuid(this.#add_member_select.value)
             })
         }
         get_elem(): HTMLDivElement { return this.#root }
@@ -1060,6 +1105,11 @@ export namespace Group {
         }
         static get_short_text(): string { return 'Liés, couple…' }
 
+        #add_member_by_uuid(uuid: string) {
+            this.#add_member(this.#participant_list.get_participant_by_uuid(uuid)!);
+            (this.#add_member_select.querySelector(`option[value="${uuid}"]`) as HTMLOptionElement).dataset.excluded = '';
+            (this.#add_member_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
+        }
         #add_member(participant: Participant) {
             const name_elem = element_factory('div', undefined, participant.name)
             const remove_member_btn = element_factory('button', { type: 'button', title: `Retirer ${participant.name} du groupe` }, svg_factory('/img/Delete.svg'))
@@ -1084,6 +1134,11 @@ export namespace Group {
         }
 
         get_raw_data(): LinkedGroupRawData { return Array.from(this.#member_list.children, elem => (elem as HTMLElement).dataset.uuid!) }
+        set_from_raw_data(raw_data: LinkedGroupRawData): void {
+            this.#member_list.innerHTML = ''
+            for (const member_uuid of raw_data.reverse())
+                this.#add_member_by_uuid(member_uuid)
+        }
     }
 
 }

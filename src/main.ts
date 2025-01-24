@@ -29,6 +29,7 @@ namespace RawData { // Raw data storage
     type RawDataAgregation = {
         participants: ParticipantListRawData
         history: HistoryRawData
+        groups: Group.GroupListRawData
     }
     function write_raw_data(raw_data: RawDataAgregation) {
         if (raw_data.participants.length > 0)
@@ -51,6 +52,7 @@ namespace RawData { // Raw data storage
         const raw_data: RawDataAgregation = {
             participants: participant_list.get_raw_data(),
             history: history.get_raw_data(),
+            groups: group_list.get_raw_data(),
         }
         write_raw_data(raw_data)
     }
@@ -69,10 +71,12 @@ namespace RawData { // Raw data storage
 
         participant_list.set_from_raw_data(raw_data.participants)
         history.set_from_raw_data(raw_data.history)
+        group_list.set_from_raw_data(raw_data.groups)
     }
 
     participant_list.addEventListener('update', () => { debounce_store_raw_data() })
     history.addEventListener('update', () => { debounce_store_raw_data(0) })
+    group_list.addEventListener('update', () => { debounce_store_raw_data(0) })
 }
 
 { // Tutorial or main app
