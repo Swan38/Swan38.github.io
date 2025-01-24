@@ -2,7 +2,7 @@ import SVGInjector from "svg-injector"
 
 import './style.css'
 
-import { Participant, History, Group } from "./components"
+import { Participant, History, Group, Next } from "./components"
 import { cookie } from "./cookies"
 
 
@@ -13,16 +13,20 @@ const tutorial: HTMLDivElement = document.getElementById('tutorial') as HTMLDivE
 const tab_layout: HTMLDivElement = document.getElementById('tab_layout') as HTMLDivElement
 
 const container_participants: HTMLElement = document.getElementById(`container_participants`)!
-const participant_list = new Participant.ParticipantEditor()
+const participant_list = new Participant.Editor()
 container_participants.insertAdjacentElement('beforeend', participant_list.get_elem())
 
 const container_history: HTMLElement = document.getElementById(`container_history`)!
-const history = new History.HistoryEditor(participant_list)
+const history = new History.Editor(participant_list)
 container_history.insertAdjacentElement('beforeend', history.get_elem())
 
 const container_groups: HTMLElement = document.getElementById(`container_groups`)!
-const group_list = new Group.GroupEditor(participant_list)
+const group_list = new Group.Editor(participant_list)
 container_groups.insertAdjacentElement('beforeend', group_list.get_elem())
+
+const container_next: HTMLElement = document.getElementById(`container_next_christmas`)!
+const next = new Next.Editor(participant_list, history, group_list)
+container_next.insertAdjacentElement('beforeend', next.get_elem())
 
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'

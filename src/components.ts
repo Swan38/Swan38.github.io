@@ -36,7 +36,7 @@ export namespace Participant {
 
     export type ParticipantListRawData = Array<ParticipantRawData>
 
-    export class ParticipantEditor {
+    export class Editor {
         #root: HTMLDivElement
         #participants_list_container: HTMLDivElement
         #participant_list: Array<Participant>
@@ -159,13 +159,13 @@ export namespace Participant {
     }
 
     export class Participant {
-        #parent_list: ParticipantEditor
+        #parent_list: Editor
         #uuid: string
         #root: HTMLDivElement
         #input: HTMLInputElement
         #first_input_listener?: () => void
 
-        constructor(parent_list: ParticipantEditor) {
+        constructor(parent_list: Editor) {
             this.#parent_list = parent_list
             this.#uuid = uuid()
             this.#input = element_factory('input', { type: 'text', placeholder: 'Pseudonyme', size: '1' })
@@ -256,8 +256,8 @@ export namespace History {
 
     export type HistoryRawData = Array<ExchangeData>
 
-    export class HistoryEditor {
-        #participant_list: Participant.ParticipantEditor
+    export class Editor {
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
         #exchanges: Array<ExchangeData>
 
@@ -267,7 +267,7 @@ export namespace History {
         #participant_view: ViewParticipant
         #views: Array<View>
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
 
             this.#exchanges = []
@@ -389,10 +389,10 @@ export namespace History {
     }
 
     class ViewYear implements View {
-        #participant_list: Participant.ParticipantEditor
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
             this.#root = element_factory('div', { class: 'history_view', id: 'history_view_year' }, ALLOWED_YEAR_LIST.map(year => {
                 const year_button = element_factory('button', { class: 'history_new_exchange_button', type: 'button' }, [
@@ -502,10 +502,10 @@ export namespace History {
     }
 
     class ViewParticipant implements View {
-        #participant_list: Participant.ParticipantEditor
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
             this.#root = element_factory('div', { class: 'history_view', id: 'history_view_giver' })
 
@@ -669,12 +669,12 @@ export namespace Group {
     }
     export type GroupListRawData = Array<GroupRawData>
 
-    export class GroupEditor {
-        #participant_list: Participant.ParticipantEditor
+    export class Editor {
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
         #groups_raw_data: GroupListRawData
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
 
             const new_group_section = this.#new_group_section()
@@ -793,12 +793,12 @@ export namespace Group {
     type LinkedGroupRawData = Array<string>
 
     class MutualExclusion implements GroupType {
-        #participant_list: Participant.ParticipantEditor
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
         #add_member_select: HTMLSelectElement
         #member_list: HTMLDivElement
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
             const delete_button = element_factory('button', { type: 'button', title: 'Supprimer ce groupe' }, svg_factory('/img/Delete.svg'))
             const header = element_factory('div', { class: 'group_header' }, [
@@ -874,14 +874,14 @@ export namespace Group {
     }
 
     class OneWayExclusion implements GroupType {
-        #participant_list: Participant.ParticipantEditor
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
         #add_member_from_select: HTMLSelectElement
         #member_from_list: HTMLDivElement
         #add_member_to_select: HTMLSelectElement
         #member_to_list: HTMLDivElement
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
             const delete_button = element_factory('button', { type: 'button', title: 'Supprimer ce groupe' }, svg_factory('/img/Delete.svg'))
             const header = element_factory('div', { class: 'group_header' }, [
@@ -1001,12 +1001,12 @@ export namespace Group {
     }
 
     class Linked implements GroupType {
-        #participant_list: Participant.ParticipantEditor
+        #participant_list: Participant.Editor
         #root: HTMLDivElement
         #add_member_select: HTMLSelectElement
         #member_list: HTMLDivElement
 
-        constructor(participant_list: Participant.ParticipantEditor) {
+        constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
             const delete_button = element_factory('button', { type: 'button', title: 'Supprimer ce groupe' }, svg_factory('/img/Delete.svg'))
             const header = element_factory('div', { class: 'group_header' }, [
@@ -1081,3 +1081,32 @@ export namespace Group {
     }
 
 }
+
+export namespace Next {
+
+    export class Editor {
+        #participant: Participant.Editor
+        #history: History.Editor
+        #group: Group.Editor
+
+        #root: HTMLDivElement
+
+        constructor(participant: Participant.Editor, history: History.Editor, group: Group.Editor) {
+            this.#participant = participant
+            this.#history = history
+            this.#group = group
+
+            const control = element_factory('div', { class: 'control' }, [
+                // TODO Year (choice if close to christmas)
+                // TODO Number of gifts/person
+            ])
+
+            this.#root = element_factory('div', { class: 'next' }, [
+                control,
+            ])
+        }
+
+        get_elem() { return this.#root }
+    }
+
+} // namespace Next
