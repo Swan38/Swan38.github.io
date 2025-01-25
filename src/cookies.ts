@@ -1,5 +1,5 @@
 
-export namespace cookie {
+export namespace Cookie {
     export function write(key: string, value: string, days: number = 365 / 2) {
         document.cookie = `${key}=${value};expires=${expires(days)};path=/`
     }

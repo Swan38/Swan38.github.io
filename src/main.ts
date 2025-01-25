@@ -3,7 +3,7 @@ import SVGInjector from "svg-injector"
 import './style.css'
 
 import { Participant, History, Group, Next } from "./components"
-import { cookie } from "./cookies"
+import { Cookie } from "./cookies"
 
 
 SVGInjector(document.querySelectorAll(`img[class="tab_selection_image"]`))
@@ -37,19 +37,19 @@ namespace RawData { // Raw data storage
     }
     function write_raw_data(raw_data: RawDataAgregation) {
         if (raw_data.participants.length > 0)
-            cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
+            Cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
         else
-            cookie.erase(RAW_DATA_KEY)
+            Cookie.erase(RAW_DATA_KEY)
     }
     function read_raw_data(): RawDataAgregation | undefined {
-        const cookie_value: string | undefined = cookie.read(RAW_DATA_KEY)
+        const cookie_value: string | undefined = Cookie.read(RAW_DATA_KEY)
         if (cookie_value === undefined)
             return undefined
         else
             return JSON.parse(cookie_value)
     }
     export function is_raw_data_stored() {
-        return cookie.read(RAW_DATA_KEY) !== undefined
+        return Cookie.read(RAW_DATA_KEY) !== undefined
     }
 
     function store_raw_data() {
@@ -112,5 +112,19 @@ namespace RawData { // Raw data storage
     drop_area.ondrop = (event) => {
         drop_input.files = event.dataTransfer?.files || null
         event.preventDefault()
+    }
+}
+
+{ // Persistent tabs
+    { // Set begin value
+        const selected_tab = Cookie.read('selected_tab')
+        if (selected_tab !== undefined)
+            (document.querySelector(`#tab_layout input[type="radio"][name="tab_selection"][value="${selected_tab}"]`) as HTMLInputElement).checked = true
+    }
+
+    for (const tab_input of document.querySelectorAll(`#tab_layout input[type="radio"][name="tab_selection"]`)) {
+        (tab_input as HTMLInputElement).addEventListener('change', (event)=> {
+            Cookie.write('selected_tab', (event.target as HTMLInputElement).value, 365/2)
+        })
     }
 }

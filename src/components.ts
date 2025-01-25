@@ -1,6 +1,8 @@
 import SVGInjector from "svg-injector"
 import { v4 as uuid } from 'uuid'
 
+import { Cookie } from "./cookies"
+
 function element_factory<K extends keyof HTMLElementTagNameMap>(tag_name: K, attributes?: Object, content?: Array<HTMLElement> | HTMLElement | string): HTMLElementTagNameMap[K] {
     const element = document.createElement(tag_name)
 
@@ -273,14 +275,22 @@ export namespace History {
             this.#exchanges = []
 
             // View radio
-            function view_radio_option_factory(label: string, value: string, title: string, checked: boolean = false): HTMLLabelElement {
+            function view_radio_option_factory(label: string, value: string, title: string, default_checked: boolean = false): HTMLLabelElement {
                 const label_elem = element_factory('label', { tabindex: '0', unselectable: 'on', title: title }, label)
                 const input_elem = element_factory('input', { type: 'radio', name: 'history_view_radio', value: value, style: 'display: none;' })
-                if (checked)
+                if (default_checked)
+                    input_elem.setAttribute('checked', '')
+                console.log(value, Cookie.read('selected_history_view_radio'))
+                if (value === Cookie.read('selected_history_view_radio'))
                     input_elem.checked = true
+                input_elem.addEventListener('change', (event)=> {
+                    console.log((event.target as HTMLInputElement).value)
+                    Cookie.write('selected_history_view_radio', (event.target as HTMLInputElement).value, 365/2)
+                })
                 label_elem.appendChild(input_elem)
                 return label_elem
             }
+            // const selected_history_view_radio = cookie.read('selected_history_view_radio')
             this.#view_radio = element_factory('div', { class: 'view_radio' }, [
                 view_radio_option_factory('Année', 'year', 'Vue par années', true),
                 view_radio_option_factory('Offreu·r·se', 'giver', 'Vue par offreu·r·se'),
