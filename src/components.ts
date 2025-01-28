@@ -3,6 +3,15 @@ import { v4 as uuid } from 'uuid'
 
 import { Cookie } from "./cookies"
 
+
+function clamp(min: number | undefined, value: number, max: number | undefined): number {
+    if (min !== undefined && value < min)
+        return min
+    else if (max !== undefined && value > max)
+        return max
+    return value
+}
+
 function element_factory<K extends keyof HTMLElementTagNameMap>(tag_name: K, attributes?: Object, content?: Array<HTMLElement> | HTMLElement | string): HTMLElementTagNameMap[K] {
     const element = document.createElement(tag_name)
 
@@ -27,6 +36,91 @@ function svg_factory(src: string): HTMLElement {
     const img_elem = element_factory('img', { src: src })
     setTimeout(() => { SVGInjector(img_elem) }, 0)
     return img_elem
+}
+
+interface InputNumberAttributes {
+    value?: number
+    min?: number
+    max?: number
+    placeholder?: string
+    step?: number
+}
+
+interface InputNumberEventMap {
+    'change': Event
+}
+
+class InputNumber {
+    #root: HTMLDivElement
+    #input: HTMLInputElement
+    #init_value: number
+    #min: number | undefined
+    #max: number | undefined
+
+    constructor(name: string, attributes?: InputNumberAttributes, input_width?: string) {
+        this.#input = element_factory('input', Object.assign({ type: 'number', name: name }, attributes || {}))
+        if (input_width !== undefined)
+            this.#input.setAttribute('style', `--width: ${input_width};`)
+
+        const up = element_factory('button', { type: 'button', tabindex: '-1' })
+        const down = element_factory('button', { type: 'button', tabindex: '-1' })
+
+        this.#root = element_factory('div', { class: 'input_number' }, [
+            this.#input,
+            up,
+            down,
+        ])
+
+        // Events
+        const step: number = attributes?.step || 1
+        this.#init_value = clamp(
+            attributes?.min,
+            attributes?.placeholder === undefined ? 0 : (parseInt(attributes.placeholder) || 0),
+            attributes?.max
+        )
+        this.#min = attributes?.min
+        this.#max = attributes?.max
+        const take_step_up = () => { this.#take_step(step) }
+        const take_step_down = () => { this.#take_step(-step) }
+        up.addEventListener('click', take_step_up)
+        down.addEventListener('click', take_step_down)
+        this.#input.addEventListener('keydown', (event: KeyboardEvent) => {
+            switch (event.key) {
+                case 'ArrowUp':
+                    take_step_up()
+                    event.stopImmediatePropagation()
+                    event.preventDefault()
+                    break;
+                case 'ArrowDown':
+                    take_step_down()
+                    event.stopImmediatePropagation()
+                    event.preventDefault()
+                    break;
+            }
+        })
+        this.#input.addEventListener('input', () => { this.#dispatchEventChange() })
+    }
+    get_elem() { return this.#root }
+
+    get value() {
+        return parseInt(this.#input.value) || parseInt(this.#input.placeholder)
+    }
+
+    #take_step(step: number) {
+        this.#input.value = clamp(
+            this.#min,
+            (parseInt(this.#input.value) || this.#init_value) + step,
+            this.#max
+        ).toString()
+        this.#dispatchEventChange()
+        this.#input.focus()
+    }
+
+    #dispatchEventChange() { this.#root.dispatchEvent(new Event('change')) }
+
+    addEventListener<K extends keyof InputNumberEventMap>(type: K, listener: (this: Participant.Participant, ev: InputNumberEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+        this.#root.addEventListener(type as unknown as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+    }
 }
 
 export namespace Participant {
@@ -280,12 +374,10 @@ export namespace History {
                 const input_elem = element_factory('input', { type: 'radio', name: 'history_view_radio', value: value, style: 'display: none;' })
                 if (default_checked)
                     input_elem.setAttribute('checked', '')
-                console.log(value, Cookie.read('selected_history_view_radio'))
                 if (value === Cookie.read('selected_history_view_radio'))
                     input_elem.checked = true
-                input_elem.addEventListener('change', (event)=> {
-                    console.log((event.target as HTMLInputElement).value)
-                    Cookie.write('selected_history_view_radio', (event.target as HTMLInputElement).value, 365/2)
+                input_elem.addEventListener('change', (event) => {
+                    Cookie.write('selected_history_view_radio', (event.target as HTMLInputElement).value, 365 / 2)
                 })
                 label_elem.appendChild(input_elem)
                 return label_elem
@@ -1100,23 +1192,50 @@ export namespace Next {
         #group: Group.Editor
 
         #root: HTMLDivElement
+        #year: InputNumber
+        #gift_number: InputNumber
 
         constructor(participant: Participant.Editor, history: History.Editor, group: Group.Editor) {
             this.#participant = participant
             this.#history = history
             this.#group = group
 
+            const DEFAULT_YEAR: number = (() => {
+                // Next year since 25th december
+                const next_week_date = new Date()
+                next_week_date.setTime(next_week_date.getTime() + (7 * 24 * 60 * 60 * 1000))
+                return next_week_date.getFullYear()
+            })()
+            this.#year = new InputNumber('gift_per_participant', { placeholder: DEFAULT_YEAR.toString() }, `${(DEFAULT_YEAR + 1).toString().length}ch`)
+            this.#gift_number = new InputNumber('gift_per_participant', { placeholder: '1', min: 1, max: 99 }, `2ch`)
+
+            const generate_button = element_factory('button', { type: 'button', class: 'generate_button' }, `Générer ▶`)
+
             const control = element_factory('div', { class: 'control' }, [
-                // TODO Year (choice if close to christmas)
-                // TODO Number of gifts/person
+                element_factory('label', undefined, [
+                    element_factory('div', undefined, `Année`),
+                    this.#year.get_elem(),
+                ]),
+                element_factory('label', undefined, [
+                    element_factory('div', undefined, `Cadeau·x/participant·e`),
+                    this.#gift_number.get_elem(),
+                ]),
+                generate_button,
             ])
 
             this.#root = element_factory('div', { class: 'next' }, [
                 control,
             ])
+
+            // Events
+            generate_button.addEventListener('click', () => { this.#control_generate() })
         }
 
         get_elem() { return this.#root }
+
+        #control_generate() {
+            console.log(this.#year.value, this.#gift_number.value)
+        }
     }
 
 } // namespace Next

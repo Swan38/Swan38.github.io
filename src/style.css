@@ -290,6 +290,7 @@ label.tab_selection > svg {
         stroke-width: 4 !important;
     }
 }
+
 /* #endregion Tab */
 
 /* #region Participants */
@@ -610,3 +611,116 @@ label.tab_selection > svg {
 }
 
 /* #endregion Groups */
+
+/* #region Next christmas */
+
+.input_number {
+    display: grid;
+    grid-template-columns: 0fr 0fr;
+    grid-template-rows: 1fr 1fr;
+
+    font-size: large;
+    border-radius: .5em;
+    background: var(--background-color);
+    overflow: hidden;
+}
+.input_number:focus-within {
+    outline: -webkit-focus-ring-color auto 1px;
+}
+.input_number > input {
+    grid-row-start: 1;
+    grid-row-end: 3;
+    border: none;
+    background: none;
+    text-align: center;
+    --width: 3ch;
+    width: var(--width);
+    padding: .5em;
+    outline: none;
+    /* Firefox */
+    -moz-appearance: textfield;
+}
+/* Chrome, Safari, Edge, Opera */
+.input_number > input::-webkit-outer-spin-button,
+.input_number > input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.input_number > input::placeholder {
+    color: var(--color);
+    opacity: .65;
+}
+.input_number > button {
+    background: none;
+    border-radius: 0;
+    border: none;
+    border-left: 1px solid grey;
+    height: 1.25em;
+    width: 1.5em;
+    position: relative;
+    --gap: .25em;
+}
+.input_number > button:hover {
+    background: rgba(0, 0, 0, .35);
+}
+.input_number > button::after {
+    content: "";
+    position: absolute;
+    --side-length-em: .5;
+    --side-length: calc(var(--side-length-em) * 1em);
+    height: var(--side-length);
+    width: var(--side-length);
+    border: 2px solid grey;
+    border-bottom: none;
+    border-right: none;
+    transform-origin: top left;
+}
+.input_number > button:first-of-type:after {
+    bottom: 0;
+    /* transform: translateY(calc(-1em * sqrt(pow(var(--side-length-em), 2) / 2))) rotate(45deg); */
+    transform: translateY(calc(var(--gap) / -2)) rotate(45deg);
+}
+.input_number > button:last-of-type:after {
+    top: 0;
+    transform: translateY(calc(var(--gap) / 2)) translateY(100%) rotate(-135deg);
+}
+
+.next .control {
+    background: var(--secondary-background-color);
+    font-size: large;
+    padding: .5em;
+    border-radius: 1em;
+}
+.next .control > * {
+    margin: .5em 0;
+}
+.next .control > *:first-child {
+    margin-top: 0;
+}
+.next .control > *:last-child {
+    margin-bottom: 0;
+}
+.next .control > label {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: .5em;
+}
+.next .control > label > :first-child {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+.next .control .generate_button {
+    display: block;
+    background: var(--green);
+    color: var(--color);
+    border: none;
+    font-size: large;
+    padding: .5em 1em;
+    font-weight: 600;
+    border-radius: 100vmax;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* #endregion Next christmas */
