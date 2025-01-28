@@ -23,6 +23,8 @@
     color: var(--color);
     background-color: var(--background-color);
 
+    --focus-outline: 2px solid var(--focus-accent-color);
+
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -31,6 +33,12 @@
 * {
     font-family: Livvic, sans-serif;
     color: var(--color);
+}
+
+*:focus-visible {
+    outline: var(--focus-outline);
+    z-index: 999 !important;
+    border-radius: 2px;
 }
 
 *[unselectable] {
@@ -320,7 +328,6 @@ label.tab_selection > svg {
     font-weight: 600;
     border-radius: .5em;
     margin: .5em;
-    outline: 0px solid var(--focus-accent-color);
 
     display: flex;
     flex-direction: row;
@@ -345,6 +352,7 @@ label.tab_selection > svg {
     background-color: rgba(0, 0, 0, .35);
 }
 .participant_definition:has(:focus-visible) {
+    outline: var(--focus-outline);
     outline-width: 2px;
     overflow: hidden;
 }
@@ -354,16 +362,13 @@ label.tab_selection > svg {
     border: none;
     padding: 0;
     margin: 0;
-    /* height: 2em;
-    width: 2em; */
+    border-radius: .5em;
 }
 .participant_definition .delete_participant_button svg {
     display: block;
     margin: .5em;
     height: 2em;
     width: 2em;
-
-    /* fill: var(--color); */
 }
 .participant_definition:focus-within .delete_participant_button {
     display: block;
@@ -394,6 +399,7 @@ label.tab_selection > svg {
     position: relative;
     z-index: 1;
     padding: calc(var(--gap) / 2);
+    border-radius: calc(var(--gap) / 2);
 }
 .history .view_radio > :has(:checked)::before {
     content: "";
@@ -625,7 +631,7 @@ label.tab_selection > svg {
     overflow: hidden;
 }
 .input_number:focus-within {
-    outline: -webkit-focus-ring-color auto 1px;
+    outline: var(--focus-outline);
 }
 .input_number > input {
     grid-row-start: 1;
