@@ -20,6 +20,8 @@
     --shadow-color: lightgray;
     --disabled-color: lightgray;
     --focus-accent-color: var(--red);
+    /* --error-color: rgba(255, 164, 27, 0.63); */
+    --error-color: rgba(255, 42, 27, 0.63);
     color: var(--color);
     background-color: var(--background-color);
 
@@ -142,6 +144,26 @@ select > option[data-excluded] {
 
 button > svg {
     vertical-align: middle;
+}
+
+.error_box[clear] {
+    display: none;
+}
+.error_box {
+    font-size: large;
+    padding: .5em;
+    border-radius: 1em;
+    margin: .5em 0;
+    background: var(--error-color);
+}
+.error_box > .message {
+    font-size: medium;
+}
+.error_box > svg {
+    display: block;
+    height: 2em;
+    width: 2em;
+    margin: 0 auto .5em;
 }
 
 /* #endregion Page */
@@ -691,6 +713,42 @@ label.tab_selection > svg {
     top: 0;
     transform: translateY(calc(var(--gap) / 2)) translateY(100%) rotate(-135deg);
 }
+
+input[type="checkbox"] {
+    font-size: large;
+    height: .5em;
+    width: .5em;
+    margin: .25em;
+    display: block;
+    position: relative;
+}
+input[type="checkbox"]::after {
+    content: '';
+    position: absolute;
+    top: -.25em;
+    bottom: -.25em;
+    left: -.25em;
+    right: -.25em;
+    border-radius: .25em;
+    background: var(--background-color);
+}
+input[type="checkbox"]:hover::after {
+    border-color: var(--dark-green);
+}
+input[type="checkbox"]:checked::after {
+    content: '✔';
+    text-align: center;
+    line-height: 1;
+    vertical-align: middle;
+    background: var(--green);
+}
+input[type="checkbox"]:active::after {
+    background: var(--dark-green);
+}
+input[type="checkbox"]:focus-visible::after {
+    outline: var(--focus-outline);
+}
+
 
 .next .control {
     background: var(--secondary-background-color);

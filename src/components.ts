@@ -127,6 +127,29 @@ class InputNumber {
     }
 }
 
+class ErrorBox {
+    #root: HTMLDivElement
+    #message: HTMLDivElement
+
+    constructor() {
+        this.#message = element_factory('div', { class: 'message' })
+        this.#root = element_factory('div', { class: 'error_box', 'clear': '' }, [
+            svg_factory('/img/Error.svg'),
+            this.#message,
+        ])
+    }
+
+    set(message: string) {
+        this.#message.innerHTML = message
+        this.#root.removeAttribute('clear')
+    }
+    clear() {
+        this.#root.setAttribute('clear', '')
+    }
+
+    get_elem() { return this.#root }
+}
+
 export namespace Participant {
 
     export type Uuid = string
@@ -1290,6 +1313,7 @@ export namespace Next {
     type ControlRawData = {
         year?: number
         gift_number?: number
+        no_two_loop: boolean
     }
     type ResultRawData = undefined
     export type NextRawData = {
@@ -1307,8 +1331,13 @@ export namespace Next {
         #group: Group.Editor
 
         #root: HTMLDivElement
+        // Control
         #year: InputNumber
         #gift_number: InputNumber
+        #avoid_two_loop: HTMLInputElement
+        // Error
+        #error_box: ErrorBox
+        // Result
 
         #exchange_score_ref_year: number
         #giver_datas: Array<GiverData>
@@ -1317,6 +1346,8 @@ export namespace Next {
             this.#participant = participant
             this.#history = history
             this.#group = group
+
+            this.#giver_datas = []
 
             const control = (() => {
                 const DEFAULT_YEAR: number = (() => {
@@ -1327,6 +1358,7 @@ export namespace Next {
                 })()
                 this.#year = new InputNumber('gift_per_participant', { placeholder: DEFAULT_YEAR.toString() }, `${(DEFAULT_YEAR + 1).toString().length}ch`)
                 this.#gift_number = new InputNumber('gift_per_participant', { placeholder: '1', min: 1, max: 99 }, `2ch`)
+                this.#avoid_two_loop = element_factory('input', { type: 'checkbox', checked: '' })
 
                 this.#exchange_score_ref_year = DEFAULT_YEAR
                 this.#year.addEventListener('change', () => {
@@ -1334,6 +1366,9 @@ export namespace Next {
                     this.#root.dispatchEvent(new Event('update'))
                 })
                 this.#gift_number.addEventListener('change', () => {
+                    this.#root.dispatchEvent(new Event('update'))
+                })
+                this.#avoid_two_loop.addEventListener('change', () => {
                     this.#root.dispatchEvent(new Event('update'))
                 })
 
@@ -1348,6 +1383,10 @@ export namespace Next {
                         element_factory('div', undefined, `Cadeau·x/participant·e`),
                         this.#gift_number.get_elem(),
                     ]),
+                    element_factory('label', undefined, [
+                        element_factory('div', undefined, `Pas de boucle de deux`),
+                        this.#avoid_two_loop,
+                    ]),
                     generate_button,
                 ])
 
@@ -1357,10 +1396,11 @@ export namespace Next {
                 return control
             })()
 
-            this.#giver_datas = []
+            this.#error_box = new ErrorBox()
 
             this.#root = element_factory('div', { class: 'next' }, [
                 control,
+                this.#error_box.get_elem(),
             ])
 
             // // Init values
@@ -1473,6 +1513,7 @@ export namespace Next {
             for (const excluded_from_uuid of participants_from) {
                 const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)!
                 for (const excluded_to_uuid of participants_to) {
+                    if (excluded_from_uuid == excluded_to_uuid) continue;
                     const previous_black_list_count = from_giver.give_to_black_list_count[excluded_to_uuid] || 0
                     from_giver.give_to_black_list_count[excluded_to_uuid] = previous_black_list_count + 1
                     if (previous_black_list_count == 0)
@@ -1486,7 +1527,7 @@ export namespace Next {
                 for (const excluded_to_uuid of participants_to) {
                     const new_black_list_count = --from_giver.give_to_black_list_count[excluded_to_uuid]
                     if (new_black_list_count == 0) {
-                        this.#sort_insert_give_to(from_giver, excluded_to_uuid)
+                        this.#sorted_insert_give_to(from_giver, excluded_to_uuid)
                     }
                 }
             }
@@ -1516,7 +1557,7 @@ export namespace Next {
         #exchange_add(exchange: History.ExchangeData) {
             const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == exchange.from_uuid)!
             from_giver.give_to_scores[exchange.to_uuid].add(exchange.uuid, this.#compute_exchange_score(exchange.year))
-            this.#sort_insert_give_to(from_giver, exchange.to_uuid)
+            this.#sort_give_to(from_giver, exchange.to_uuid)
         }
         #exchange_edited(exchange: History.ExchangeData) {
             const new_exchange_score = this.#compute_exchange_score(exchange.year)
@@ -1531,11 +1572,25 @@ export namespace Next {
                     if (to_score.remove(exchange_uuid))
                         return;
         }
-        #sort_insert_give_to(from_giver: GiverData, to_uuid: Participant.Uuid) {
-            // Remove (for update/move)
+        #sort_give_to(from_giver: GiverData, to_uuid: Participant.Uuid) {
             const found_index = from_giver.give_to_filtered_sorted.findIndex(a_uuid => a_uuid == to_uuid)
-            if (found_index >= 0)
-                from_giver.give_to_filtered_sorted.splice(found_index, 1)
+            if (found_index < 0) return; // Currently excluded
+
+            // Remove to insert elsewere
+            from_giver.give_to_filtered_sorted.splice(found_index, 1)
+
+            // Insert back
+            from_giver.give_to_filtered_sorted.splice( // Insert at index
+                from_giver.give_to_filtered_sorted.findIndex(next_uuid => {
+                    return from_giver.give_to_scores[to_uuid].value <= from_giver.give_to_scores[next_uuid].value
+                }),
+                0,
+                to_uuid
+            )
+        }
+        #sorted_insert_give_to(from_giver: GiverData, to_uuid: Participant.Uuid) {
+            if (from_giver.give_to_filtered_sorted.findIndex(a_uuid => a_uuid == to_uuid) >= 0)
+                throw new Error(`Found "give to" but it was expected excluded`)
 
             // Insert
             from_giver.give_to_filtered_sorted.splice( // Insert at index
@@ -1561,6 +1616,151 @@ export namespace Next {
         #control_generate() {
             // TODO
             // console.log(this.#year.value, this.#gift_number.value)
+
+            class WorkGiver {
+                static link_record: Record<Participant.Uuid, WorkGiver> = {}
+                #uuid: Participant.Uuid
+                #sorted_possible_receiver: Array<{ give_to: boolean, receiver: WorkGiver }>
+                #linked_with: Set<WorkGiver>
+                give_count: number
+                receive_count: number
+
+                #init_possible_receiver_uuid: Array<Participant.Uuid>
+                #init_linked_uuid: Array<Participant.Uuid>
+
+                constructor(data: GiverData) {
+                    this.#uuid = data.uuid
+                    this.#sorted_possible_receiver = []
+                    this.#linked_with = new Set()
+                    this.give_count = 0
+                    this.receive_count = 0
+
+                    this.#init_possible_receiver_uuid = data.give_to_filtered_sorted
+                    this.#init_linked_uuid = Object.entries(data.linked_to).map(key_value => key_value[0])
+
+                    WorkGiver.link_record[this.#uuid] = this
+                }
+
+                static init() {
+                    for (const [, giver] of Object.entries(this.link_record))
+                        giver.#on_init()
+                }
+                #on_init() {
+                    for (const other_uuid of this.#init_possible_receiver_uuid)
+                        this.#sorted_possible_receiver.push({ give_to: false, receiver: WorkGiver.link_record[other_uuid] })
+                    for (const other_uuid of this.#init_linked_uuid)
+                        this.#linked_with.add(WorkGiver.link_record[other_uuid])
+                }
+
+                get_possible_receiver_left_count() {
+                    return this.#sorted_possible_receiver
+                        .reduce(
+                            (count, value) => count + (value.give_to ? 0 : 1),
+                            0
+                        )
+                }
+                get_sorted_receiver_left() {
+                    return this.#sorted_possible_receiver
+                        .filter(value => !value.give_to)
+                }
+                does_give_to(other: WorkGiver): boolean { return this.#sorted_possible_receiver.some(value => value.give_to && value.receiver == other) }
+
+                get uuid() { return this.#uuid }
+                get_result_receivers(): Array<Participant.Uuid> {
+                    return this.#sorted_possible_receiver
+                        .filter(value => value.give_to)
+                        .map(value => value.receiver.#uuid)
+                }
+            }
+
+            const work_givers = this.#giver_datas.map(giver_data => new WorkGiver(giver_data))
+            WorkGiver.init()
+            work_givers.sort((before, after) => before.get_possible_receiver_left_count() - after.get_possible_receiver_left_count())
+
+            const NO_TWO_LOOP: boolean = this.#avoid_two_loop.checked
+            const MAX_GIFT_NUMBER: number = this.#gift_number.value
+            const TOTAL_MAX_GIFT_NUMBER: number = MAX_GIFT_NUMBER * work_givers.length
+            let current_gift_number = 0
+
+            { // Error prevention
+                if (MAX_GIFT_NUMBER > work_givers.length - 1) {
+                    this.#error_box.set(`Vous demandez d'offrir plus de cadeaux (${MAX_GIFT_NUMBER}) qu'il y a d'autres participants (${work_givers.length} - 1).`)
+                    return
+                }
+                for (const a_participant of work_givers) {
+                    const a_participant_name = this.#participant.get_participant_by_uuid(a_participant.uuid)?.name
+                    const givable: Set<Participant.Uuid> = new Set(a_participant.get_sorted_receiver_left().map(value => value.receiver.uuid))
+                    const receivable: Set<Participant.Uuid> = new Set(work_givers.filter(giver => giver.get_sorted_receiver_left().map(value => value.receiver).includes(a_participant)).map(giver => giver.uuid))
+
+                    if (givable.size == 0) {
+                        this.#error_box.set(`<b>${a_participant_name}</b> ne peut offrir de cadeaux à personne. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
+                        return
+                    }
+                    if (receivable.size == 0) {
+                        this.#error_box.set(`Personne ne peut offir de cadeau à <b>${a_participant_name}</b>. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
+                        return
+                    }
+                    if (givable.size < MAX_GIFT_NUMBER) {
+                        this.#error_box.set(`<b>${a_participant_name}</b> ne peut offir de cadeaux qu'à ${givable.size} personnes, moins que le nombre de cadeaux par personne (${MAX_GIFT_NUMBER}). Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
+                        return
+                    }
+                    if (receivable.size < MAX_GIFT_NUMBER) {
+                        this.#error_box.set(`<b>${a_participant_name}</b> ne peut recevoir de la part cadeaux que de la part de ${receivable.size} personnes, moins que le nombre de cadeaux par personne (${MAX_GIFT_NUMBER}). Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
+                        return
+                    }
+
+                    if (NO_TWO_LOOP) {
+                        const givable_or_receivable: Set<Participant.Uuid> = new Set([...givable, ...receivable])
+                        console.log(a_participant_name, givable_or_receivable.size, MAX_GIFT_NUMBER)
+
+                        if (givable_or_receivable.size < MAX_GIFT_NUMBER * 2) {
+                            this.#error_box.set(`<b>${a_participant_name}</b> ne peut offir et/ou recevoir de cadeaux seulement avec ${givable_or_receivable.size} personnes, moins que le double du nombre de cadeaux par personne (${MAX_GIFT_NUMBER * 2}). L'option "Pas de boucle de deux" empèche d'offrir un cadeau à quelqu'un qui vous en offre un. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
+                            return
+                        }
+                    }
+                }
+            }
+
+            /**
+             * Recursively search for a valid arrangement.
+             * 
+             * @returns true if an arrangement was found.
+             */
+            function recursive_find_arrangement(): boolean {
+                for (const giver of work_givers) {
+                    if (giver.give_count == MAX_GIFT_NUMBER) continue;
+                    if (giver.give_count > MAX_GIFT_NUMBER) throw new Error(`give_count too high`);
+                    giver.give_count++
+                    for (const receiver of giver.get_sorted_receiver_left()) {
+                        if (NO_TWO_LOOP && receiver.receiver.does_give_to(giver)) continue; // No direct loop back
+
+                        receiver.give_to = true
+                        receiver.receiver.receive_count++
+                        current_gift_number++
+
+                        if (current_gift_number == TOTAL_MAX_GIFT_NUMBER || recursive_find_arrangement())
+                            return true
+
+                        receiver.give_to = false
+                        receiver.receiver.receive_count--
+                        current_gift_number--
+                    }
+                    giver.give_count--
+                }
+
+                return false
+            }
+            const result = recursive_find_arrangement()
+
+            if (result) {
+                console.log(`✅ A valid arrangement has been found:`)
+                console.log(work_givers)
+
+                const exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }> = work_givers.map(giver => giver.get_result_receivers().map(receiver_uuid => ({ from: giver.uuid, to: receiver_uuid }))).flat()
+                console.log(exchanges)
+            } else {
+                console.log(`❌ No valid arrangement has been found`)
+            }
         }
 
         get_raw_data(): NextRawData {
@@ -1568,6 +1768,7 @@ export namespace Next {
                 control: {
                     year: this.#year.value_is_set() ? this.#year.value : undefined,
                     gift_number: this.#gift_number.value_is_set() ? this.#gift_number.value : undefined,
+                    no_two_loop: this.#avoid_two_loop.checked,
                 },
                 result: undefined,
             }
@@ -1581,6 +1782,7 @@ export namespace Next {
             if (raw_data.control.gift_number !== undefined) {
                 this.#gift_number.value = raw_data.control.gift_number
             }
+            this.#avoid_two_loop.checked = raw_data.control.no_two_loop
             // TODO Results
             // Inner values
             this.#giver_datas = []

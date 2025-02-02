@@ -84,7 +84,7 @@ namespace RawData { // Raw data storage
     participant_list.addEventListener('update', () => { debounce_store_raw_data() })
     history.addEventListener('update', () => { debounce_store_raw_data(0) })
     group_list.addEventListener('update', () => { debounce_store_raw_data(0) })
-    next.addEventListener('update', () => { debounce_store_raw_data() })
+    next.addEventListener('update', () => { debounce_store_raw_data(0) })
 }
 
 { // Tutorial or main app
