@@ -1315,7 +1315,7 @@ export namespace Next {
         gift_number?: number
         no_two_loop: boolean
     }
-    type ResultRawData = undefined
+    type ResultRawData = Array<{ from: Participant.Uuid, to: Participant.Uuid }>
     export type NextRawData = {
         control: ControlRawData
         result: ResultRawData
@@ -1338,6 +1338,7 @@ export namespace Next {
         // Error
         #error_box: ErrorBox
         // Result
+        #result_exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }>
 
         #exchange_score_ref_year: number
         #giver_datas: Array<GiverData>
@@ -1348,6 +1349,7 @@ export namespace Next {
             this.#group = group
 
             this.#giver_datas = []
+            this.#result_exchanges = []
 
             const control = (() => {
                 const DEFAULT_YEAR: number = (() => {
@@ -1614,9 +1616,6 @@ export namespace Next {
 
 
         #control_generate() {
-            // TODO
-            // console.log(this.#year.value, this.#gift_number.value)
-
             class WorkGiver {
                 static link_record: Record<Participant.Uuid, WorkGiver> = {}
                 #uuid: Participant.Uuid
@@ -1715,7 +1714,6 @@ export namespace Next {
 
                     if (NO_TWO_LOOP) {
                         const givable_or_receivable: Set<Participant.Uuid> = new Set([...givable, ...receivable])
-                        console.log(a_participant_name, givable_or_receivable.size, MAX_GIFT_NUMBER)
 
                         if (givable_or_receivable.size < MAX_GIFT_NUMBER * 2) {
                             this.#error_box.set(`<b>${a_participant_name}</b> ne peut offir et/ou recevoir de cadeaux seulement avec ${givable_or_receivable.size} personnes, moins que le double du nombre de cadeaux par personne (${MAX_GIFT_NUMBER * 2}). L'option "Pas de boucle de deux" empèche d'offrir un cadeau à quelqu'un qui vous en offre un. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
@@ -1756,17 +1754,18 @@ export namespace Next {
 
                 return false
             }
-            const result = recursive_find_arrangement()
-
-            if (result) {
-                console.log(`✅ A valid arrangement has been found:`)
-                console.log(work_givers)
-
-                const exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }> = work_givers.map(giver => giver.get_result_receivers().map(receiver_uuid => ({ from: giver.uuid, to: receiver_uuid }))).flat()
-                console.log(exchanges)
-            } else {
-                console.log(`❌ No valid arrangement has been found`)
+            if (!recursive_find_arrangement()) {
+                this.#error_box.set(`Aucun arrangement n'est possible avec les contriantes données. Diminuez ne nombre de cadeaux, autorisez les boucles de deux ou retirer des exclusions.`)
+                return
             }
+
+            this.#set_result(work_givers.map(giver => giver.get_result_receivers().map(receiver_uuid => ({ from: giver.uuid, to: receiver_uuid }))).flat())
+            this.#root.dispatchEvent(new Event('update'))
+        }
+
+        #set_result(exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }>) {
+            this.#result_exchanges = exchanges
+            console.log(exchanges)
         }
 
         get_raw_data(): NextRawData {
@@ -1776,7 +1775,7 @@ export namespace Next {
                     gift_number: this.#gift_number.value_is_set() ? this.#gift_number.value : undefined,
                     no_two_loop: this.#avoid_two_loop.checked,
                 },
-                result: undefined,
+                result: this.#result_exchanges,
             }
         }
         set_from_raw_data(raw_data: NextRawData) {
@@ -1789,7 +1788,8 @@ export namespace Next {
                 this.#gift_number.value = raw_data.control.gift_number
             }
             this.#avoid_two_loop.checked = raw_data.control.no_two_loop
-            // TODO Results
+            // Results
+            this.#set_result(raw_data.result)
             // Inner values
             this.#giver_datas = []
             for (const a_participant of this.#participant.participant_list)
