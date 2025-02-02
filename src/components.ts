@@ -1683,8 +1683,12 @@ export namespace Next {
             let current_gift_number = 0
 
             { // Error prevention
-                if (MAX_GIFT_NUMBER > work_givers.length - 1) {
-                    this.#error_box.set(`Vous demandez d'offrir plus de cadeaux (${MAX_GIFT_NUMBER}) qu'il y a d'autres participants (${work_givers.length} - 1).`)
+                if (work_givers.length - 1 < MAX_GIFT_NUMBER) {
+                    this.#error_box.set(`Vous demandez d'offrir plus de cadeaux (${MAX_GIFT_NUMBER}) qu'il y a d'autres participants (${work_givers.length} - 1).`)
+                    return
+                }
+                if (NO_TWO_LOOP && work_givers.length - 1 < MAX_GIFT_NUMBER * 2) {
+                    this.#error_box.set(`Vous demandez d'offrir et recevoir plus de cadeaux (${MAX_GIFT_NUMBER * 2}) qu'il y a d'autres participants (${work_givers.length} - 1). Diminuez le nombre de cadeau ou autorizez les boucles de deux.`)
                     return
                 }
                 for (const a_participant of work_givers) {
@@ -1719,6 +1723,8 @@ export namespace Next {
                         }
                     }
                 }
+
+                this.#error_box.clear()
             }
 
             /**
