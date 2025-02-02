@@ -643,6 +643,7 @@ label.tab_selection > svg {
     width: var(--width);
     padding: .5em;
     outline: none;
+    appearance: none;
     /* Firefox */
     -moz-appearance: textfield;
 }

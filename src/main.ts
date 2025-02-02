@@ -34,6 +34,7 @@ namespace RawData { // Raw data storage
         participants: Participant.ParticipantListRawData
         history: History.HistoryRawData
         groups: Group.GroupListRawData
+        next: Next.NextRawData
     }
     function write_raw_data(raw_data: RawDataAgregation) {
         if (raw_data.participants.length > 0)
@@ -57,11 +58,12 @@ namespace RawData { // Raw data storage
             participants: participant_list.get_raw_data(),
             history: history.get_raw_data(),
             groups: group_list.get_raw_data(),
+            next: next.get_raw_data(),
         }
         write_raw_data(raw_data)
     }
     let debounce_store_data_timeout: number | undefined = undefined
-    function debounce_store_raw_data(timeout_ms: number = 750) {
+    function debounce_store_raw_data(timeout_ms: number = 500) {
         clearTimeout(debounce_store_data_timeout)
         debounce_store_data_timeout = setTimeout(() => {
             debounce_store_data_timeout = undefined
@@ -76,11 +78,13 @@ namespace RawData { // Raw data storage
         participant_list.set_from_raw_data(raw_data.participants)
         history.set_from_raw_data(raw_data.history)
         group_list.set_from_raw_data(raw_data.groups)
+        next.set_from_raw_data(raw_data.next)
     }
 
     participant_list.addEventListener('update', () => { debounce_store_raw_data() })
     history.addEventListener('update', () => { debounce_store_raw_data(0) })
     group_list.addEventListener('update', () => { debounce_store_raw_data(0) })
+    next.addEventListener('update', () => { debounce_store_raw_data() })
 }
 
 { // Tutorial or main app
@@ -123,8 +127,8 @@ namespace RawData { // Raw data storage
     }
 
     for (const tab_input of document.querySelectorAll(`#tab_layout input[type="radio"][name="tab_selection"]`)) {
-        (tab_input as HTMLInputElement).addEventListener('change', (event)=> {
-            Cookie.write('selected_tab', (event.target as HTMLInputElement).value, 365/2)
+        (tab_input as HTMLInputElement).addEventListener('change', (event) => {
+            Cookie.write('selected_tab', (event.target as HTMLInputElement).value, 365 / 2)
         })
     }
 }

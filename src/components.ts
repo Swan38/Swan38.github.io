@@ -105,6 +105,10 @@ class InputNumber {
     get value() {
         return parseInt(this.#input.value) || parseInt(this.#input.placeholder)
     }
+    set value(value: number) {
+        this.#input.value = value.toString()
+    }
+    value_is_set(): boolean { return this.#input.value.length > 0 }
 
     #take_step(step: number) {
         this.#input.value = clamp(
@@ -124,6 +128,8 @@ class InputNumber {
 }
 
 export namespace Participant {
+
+    export type Uuid = string
 
     interface ParticipantListEventMap {
         "create": CustomEvent<Participant>
@@ -189,13 +195,13 @@ export namespace Participant {
 
         participant_picker_factory(select_name: string, excluded_uuid?: string, default_text?: string, selected_uuid?: string): HTMLSelectElement {
             function participant_option(participant: Participant): HTMLOptionElement {
-                const option_elem = element_factory('option', { value: participant.get_uuid() }, participant.name)
+                const option_elem = element_factory('option', { value: participant.uuid }, participant.name)
                 participant.addEventListener('update', () => { option_elem.innerText = participant.name })
                 participant.addEventListener('delete', () => { option_elem.remove() }, { once: true })
                 return option_elem
             }
 
-            const select = element_factory('select', { name: select_name }, this.participant_list.filter(participant => participant.get_uuid() != excluded_uuid).map(participant_option))
+            const select = element_factory('select', { name: select_name }, this.participant_list.filter(participant => participant.uuid != excluded_uuid).map(participant_option))
             if (default_text !== undefined)
                 select.insertAdjacentElement('afterbegin', element_factory('option', { selected: '' }, default_text))
             // Selected
@@ -213,7 +219,7 @@ export namespace Participant {
         }
 
         get_participant_by_uuid(uuid: string): Participant | undefined {
-            return this.#participant_list.find(participant => participant.get_uuid() == uuid)
+            return this.#participant_list.find(participant => participant.uuid == uuid)
         }
 
         get_raw_data(): ParticipantListRawData {
@@ -304,7 +310,7 @@ export namespace Participant {
         get name() { return this.#input.value }
         set name(value: string) { this.#input.value = value }
 
-        get_uuid(): string {
+        get uuid(): string {
             return this.#uuid
         }
 
@@ -339,15 +345,20 @@ export namespace History {
     export const CURRENT_YEAR = new Date().getFullYear()
     export const ALLOWED_YEAR_LIST = ((current_year: number) => { return [...Array(10).keys()].map(index => current_year - index) })(CURRENT_YEAR)
 
-    interface ExchangeData {
-        uuid: string,
-        from_uuid: string,
-        to_uuid: string,
+    export type Uuid = string
+
+    export type ExchangeData = {
+        uuid: Uuid
+        from_uuid: Participant.Uuid
+        to_uuid: Participant.Uuid
         year: number
     }
 
     interface HistoryEventMap {
-        "update": Event
+        'update': Event
+        'create': CustomEvent<ExchangeData>
+        'edited': CustomEvent<ExchangeData>
+        'delete': CustomEvent<Uuid>
     }
 
     export type HistoryRawData = Array<ExchangeData>
@@ -425,13 +436,14 @@ export namespace History {
             participant.addEventListener('delete', () => { this.#handle_participant_deletion(participant) })
         }
         #handle_participant_deletion(participant: Participant.Participant) {
-            const deleted_participant_uuid = participant.get_uuid()
+            const deleted_participant_uuid = participant.uuid
             for (const exchange of this.#exchanges) {
                 if (exchange.from_uuid == deleted_participant_uuid || exchange.to_uuid == deleted_participant_uuid) {
                     const deleted_exchange_uuid = exchange.uuid
                     this.#exchanges.splice(this.#exchanges.findIndex(old_exchange => old_exchange.uuid == deleted_exchange_uuid), 1)
                     for (const view of this.#views)
                         view.exchange_deleted(deleted_exchange_uuid)
+                    // this.#root.dispatchEvent(new CustomEvent('delete', { detail: deleted_exchange_uuid }))
                     this.#root.dispatchEvent(new Event('update'))
                 }
             }
@@ -445,6 +457,7 @@ export namespace History {
             this.#exchanges.push(new_exchange)
             for (const view of this.#other_views(event.target as HTMLElement))
                 view.exchange_created(new_exchange)
+            this.#root.dispatchEvent(new CustomEvent('create', { detail: new_exchange }))
             this.#root.dispatchEvent(new Event('update'))
         }
         #handle_udpate(event: CustomEvent<ExchangeData>) {
@@ -452,6 +465,7 @@ export namespace History {
             this.#exchanges[this.#exchanges.findIndex(old_exchange => old_exchange.uuid == new_exchange.uuid)] = new_exchange
             for (const view of this.#other_views(event.target as HTMLElement))
                 view.exchange_updated(new_exchange)
+            this.#root.dispatchEvent(new CustomEvent('edited', { detail: new_exchange }))
             this.#root.dispatchEvent(new Event('update'))
         }
         #handle_delete(event: CustomEvent<string>) {
@@ -459,8 +473,11 @@ export namespace History {
             this.#exchanges.splice(this.#exchanges.findIndex(old_exchange => old_exchange.uuid == deleted_uuid), 1)
             for (const view of this.#other_views(event.target as HTMLElement))
                 view.exchange_deleted(deleted_uuid)
+            this.#root.dispatchEvent(new CustomEvent('delete', { detail: deleted_uuid }))
             this.#root.dispatchEvent(new Event('update'))
         }
+
+        get_exchanges(): Array<ExchangeData> { return this.#exchanges }
 
         get_raw_data(): HistoryRawData { return this.#exchanges }
         set_from_raw_data(raw_data: HistoryRawData) {
@@ -627,7 +644,7 @@ export namespace History {
                 svg_factory('/img/Add.svg'),
             ])
 
-            giver_elem.dataset.participantUuid = participant.get_uuid()
+            giver_elem.dataset.participantUuid = participant.uuid
 
             participant.addEventListener('update', () => {
                 participant_name_elem.innerText = participant.name
@@ -636,7 +653,7 @@ export namespace History {
                 giver_elem.remove()
             }, { once: true })
 
-            giver_elem.addEventListener('click', () => { this.#add_exchange(participant.get_uuid()) })
+            giver_elem.addEventListener('click', () => { this.#add_exchange(participant.uuid) })
 
             this.#root.appendChild(giver_elem)
         }
@@ -767,7 +784,8 @@ export namespace History {
 export namespace Group {
 
     interface GroupListEventMap {
-        "update": Event
+        'create': CustomEvent<GroupType>
+        'update': Event
     }
     export type GroupListRawData = Array<GroupRawData>
 
@@ -775,6 +793,7 @@ export namespace Group {
         #participant_list: Participant.Editor
         #root: HTMLDivElement
         #groups_raw_data: GroupListRawData
+        #groups: Array<GroupType>
 
         constructor(participant_list: Participant.Editor) {
             this.#participant_list = participant_list
@@ -783,6 +802,7 @@ export namespace Group {
 
             this.#root = element_factory('div', { class: 'group_list' }, new_group_section)
             this.#groups_raw_data = []
+            this.#groups = []
         }
 
         get_elem() { return this.#root }
@@ -812,6 +832,8 @@ export namespace Group {
         }
 
         #insert_and_listen_group(new_group: GroupType) {
+            this.#groups.push(new_group)
+
             // Elem
             this.#root.insertAdjacentElement('beforeend', new_group.get_elem())
 
@@ -829,13 +851,28 @@ export namespace Group {
             })
             new_group.addEventListener('delete', () => {
                 this.#groups_raw_data.splice(this.#groups_raw_data.indexOf(new_group_raw_data), 1)
+                this.#groups.splice(this.#groups.indexOf(new_group), 1)
                 this.#root.dispatchEvent(new Event('update'))
-            })
+            }, { once: true })
         }
 
-        #new_blank_group_mutual() { this.#insert_and_listen_group(new MutualExclusion(this.#participant_list)) }
-        #new_blank_group_oneway() { this.#insert_and_listen_group(new OneWayExclusion(this.#participant_list)) }
-        #new_blank_group_linked() { this.#insert_and_listen_group(new Linked(this.#participant_list)) }
+        #new_blank_group_mutual() {
+            const new_group = new MutualExclusion(this.#participant_list)
+            this.#insert_and_listen_group(new_group)
+            this.#root.dispatchEvent(new CustomEvent('create', { detail: new_group }))
+        }
+        #new_blank_group_oneway() {
+            const new_group = new OneWayExclusion(this.#participant_list)
+            this.#insert_and_listen_group(new_group)
+            this.#root.dispatchEvent(new CustomEvent('create', { detail: new_group }))
+        }
+        #new_blank_group_linked() {
+            const new_group = new Linked(this.#participant_list)
+            this.#insert_and_listen_group(new_group)
+            this.#root.dispatchEvent(new CustomEvent('create', { detail: new_group }))
+        }
+
+        get_groups(): Array<GroupType> { return this.#groups }
 
         get_raw_data(): GroupListRawData { return this.#groups_raw_data }
         set_from_raw_data(raw_data: GroupListRawData) {
@@ -870,11 +907,11 @@ export namespace Group {
     }
 
     interface GroupTypeEventMap {
-        "update": Event
-        "delete": Event
+        'update': Event
+        'delete': Event
     }
 
-    interface GroupType {
+    export interface GroupType {
         readonly type_key: string
         get_elem(): HTMLElement;
         addEventListener<K extends keyof GroupTypeEventMap>(type: K, listener: (this: Participant.Participant, ev: GroupTypeEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void;
@@ -894,7 +931,12 @@ export namespace Group {
     type OneWayExclusionGroupRawData = { from: Array<string>, to: Array<string> }
     type LinkedGroupRawData = Array<string>
 
-    class MutualExclusion implements GroupType {
+    export interface ExclusionGroupType extends GroupType {
+        get_exclusion_from(): Array<Participant.Uuid>
+        get_exclusion_to(): Array<Participant.Uuid>
+    }
+
+    class MutualExclusion implements ExclusionGroupType {
         #participant_list: Participant.Editor
         #root: HTMLDivElement
         #add_member_select: HTMLSelectElement
@@ -951,7 +993,7 @@ export namespace Group {
                 name_elem,
                 remove_member_btn,
             ])
-            participant_element.dataset.uuid = participant.get_uuid()
+            participant_element.dataset.uuid = participant.uuid
             this.#member_list.insertAdjacentElement('afterbegin', participant_element)
 
             this.#root.dispatchEvent(new Event('update'))
@@ -967,6 +1009,9 @@ export namespace Group {
             this.#root.dispatchEvent(new Event('update'))
         }
 
+        get_exclusion_from(): Array<Participant.Uuid> { return this.get_raw_data() }
+        get_exclusion_to(): Array<Participant.Uuid> { return this.get_raw_data() }
+
         get_raw_data(): MutualExclusionGroupRawData { return Array.from(this.#member_list.children, elem => (elem as HTMLElement).dataset.uuid!) }
         set_from_raw_data(raw_data: MutualExclusionGroupRawData): void {
             this.#member_list.innerHTML = ''
@@ -975,7 +1020,7 @@ export namespace Group {
         }
     }
 
-    class OneWayExclusion implements GroupType {
+    class OneWayExclusion implements ExclusionGroupType {
         #participant_list: Participant.Editor
         #root: HTMLDivElement
         #add_member_from_select: HTMLSelectElement
@@ -1041,7 +1086,7 @@ export namespace Group {
                 name_elem,
                 remove_member_btn,
             ])
-            participant_element.dataset.uuid = participant.get_uuid()
+            participant_element.dataset.uuid = participant.uuid
             this.#member_from_list.insertAdjacentElement('afterbegin', participant_element)
 
             this.#root.dispatchEvent(new Event('update'))
@@ -1068,7 +1113,7 @@ export namespace Group {
                 name_elem,
                 remove_member_btn,
             ])
-            participant_element.dataset.uuid = participant.get_uuid()
+            participant_element.dataset.uuid = participant.uuid
             this.#member_to_list.insertAdjacentElement('afterbegin', participant_element)
 
             this.#root.dispatchEvent(new Event('update'))
@@ -1084,10 +1129,17 @@ export namespace Group {
             this.#root.dispatchEvent(new Event('update'))
         }
 
+        get_exclusion_from(): Array<Participant.Uuid> {
+            return Array.from(this.#member_from_list.children, elem => (elem as HTMLElement).dataset.uuid!)
+        }
+        get_exclusion_to(): Array<Participant.Uuid> {
+            return Array.from(this.#member_to_list.children, elem => (elem as HTMLElement).dataset.uuid!)
+        }
+
         get_raw_data(): OneWayExclusionGroupRawData {
             return {
-                from: Array.from(this.#member_from_list.children, elem => (elem as HTMLElement).dataset.uuid!),
-                to: Array.from(this.#member_to_list.children, elem => (elem as HTMLElement).dataset.uuid!),
+                from: this.get_exclusion_from(),
+                to: this.get_exclusion_to(),
             }
         }
         set_from_raw_data(raw_data: OneWayExclusionGroupRawData): void {
@@ -1102,7 +1154,7 @@ export namespace Group {
         }
     }
 
-    class Linked implements GroupType {
+    export class Linked implements GroupType {
         #participant_list: Participant.Editor
         #root: HTMLDivElement
         #add_member_select: HTMLSelectElement
@@ -1158,7 +1210,7 @@ export namespace Group {
                 name_elem,
                 remove_member_btn,
             ])
-            participant_element.dataset.uuid = participant.get_uuid()
+            participant_element.dataset.uuid = participant.uuid
             this.#member_list.insertAdjacentElement('afterbegin', participant_element)
 
             this.#root.dispatchEvent(new Event('update'))
@@ -1174,6 +1226,7 @@ export namespace Group {
             this.#root.dispatchEvent(new Event('update'))
         }
 
+        get_linked_participants(): Array<Participant.Uuid> { return this.get_raw_data() }
         get_raw_data(): LinkedGroupRawData { return Array.from(this.#member_list.children, elem => (elem as HTMLElement).dataset.uuid!) }
         set_from_raw_data(raw_data: LinkedGroupRawData): void {
             this.#member_list.innerHTML = ''
@@ -1186,6 +1239,68 @@ export namespace Group {
 
 export namespace Next {
 
+    class GiveToScore {
+        #exchanges_scores: Record<History.Uuid, number>
+        #total_score
+
+        constructor() {
+            this.#exchanges_scores = {}
+            this.#total_score = 0
+        }
+
+        add(exchange_uuid: History.Uuid, score: number) {
+            this.#exchanges_scores[exchange_uuid] = score
+            this.#total_score += score
+        }
+        multiply(lambda: number) {
+            for (const exchange_uuid in this.#exchanges_scores)
+                this.#exchanges_scores[exchange_uuid] *= lambda
+            this.#total_score *= lambda
+        }
+        update(exchange_uuid: History.Uuid, score: number): boolean {
+            if (exchange_uuid in this.#exchanges_scores) {
+                this.#total_score -= this.#exchanges_scores[exchange_uuid]
+                this.#total_score += this.#exchanges_scores[exchange_uuid] = score
+                return true
+            } else
+                return false
+        }
+        remove(exchange_uuid: History.Uuid): boolean {
+            if (exchange_uuid in this.#exchanges_scores) {
+                this.#total_score -= this.#exchanges_scores[exchange_uuid]
+                delete this.#exchanges_scores[exchange_uuid]
+                return true
+            } else
+                return false
+        }
+
+        get value(): number {
+            return this.#total_score
+        }
+    }
+
+    type GiverData = {
+        uuid: Participant.Uuid
+        give_to_filtered_sorted: Array<Participant.Uuid>
+        give_to_scores: Record<Participant.Uuid, GiveToScore>
+        give_to_black_list_count: Record<Participant.Uuid, number>
+        linked_to: Record<Participant.Uuid, number>
+    }
+
+    type ControlRawData = {
+        year?: number
+        gift_number?: number
+    }
+    type ResultRawData = undefined
+    export type NextRawData = {
+        control: ControlRawData
+        result: ResultRawData
+    }
+
+    interface NextEventMap {
+        'update': Event
+    }
+
     export class Editor {
         #participant: Participant.Editor
         #history: History.Editor
@@ -1195,46 +1310,286 @@ export namespace Next {
         #year: InputNumber
         #gift_number: InputNumber
 
+        #exchange_score_ref_year: number
+        #giver_datas: Array<GiverData>
+
         constructor(participant: Participant.Editor, history: History.Editor, group: Group.Editor) {
             this.#participant = participant
             this.#history = history
             this.#group = group
 
-            const DEFAULT_YEAR: number = (() => {
-                // Next year since 25th december
-                const next_week_date = new Date()
-                next_week_date.setTime(next_week_date.getTime() + (7 * 24 * 60 * 60 * 1000))
-                return next_week_date.getFullYear()
+            const control = (() => {
+                const DEFAULT_YEAR: number = (() => {
+                    // Next year since 25th december
+                    const next_week_date = new Date()
+                    next_week_date.setTime(next_week_date.getTime() + (7 * 24 * 60 * 60 * 1000))
+                    return next_week_date.getFullYear()
+                })()
+                this.#year = new InputNumber('gift_per_participant', { placeholder: DEFAULT_YEAR.toString() }, `${(DEFAULT_YEAR + 1).toString().length}ch`)
+                this.#gift_number = new InputNumber('gift_per_participant', { placeholder: '1', min: 1, max: 99 }, `2ch`)
+
+                this.#exchange_score_ref_year = DEFAULT_YEAR
+                this.#year.addEventListener('change', () => {
+                    this.#update_exchange_score_ref_year(this.#year.value)
+                    this.#root.dispatchEvent(new Event('update'))
+                })
+                this.#gift_number.addEventListener('change', () => {
+                    this.#root.dispatchEvent(new Event('update'))
+                })
+
+                const generate_button = element_factory('button', { type: 'button', class: 'generate_button' }, `Générer ▶`)
+
+                const control = element_factory('div', { class: 'control' }, [
+                    element_factory('label', undefined, [
+                        element_factory('div', undefined, `Année`),
+                        this.#year.get_elem(),
+                    ]),
+                    element_factory('label', undefined, [
+                        element_factory('div', undefined, `Cadeau·x/participant·e`),
+                        this.#gift_number.get_elem(),
+                    ]),
+                    generate_button,
+                ])
+
+                // Events
+                generate_button.addEventListener('click', () => { this.#control_generate() })
+
+                return control
             })()
-            this.#year = new InputNumber('gift_per_participant', { placeholder: DEFAULT_YEAR.toString() }, `${(DEFAULT_YEAR + 1).toString().length}ch`)
-            this.#gift_number = new InputNumber('gift_per_participant', { placeholder: '1', min: 1, max: 99 }, `2ch`)
 
-            const generate_button = element_factory('button', { type: 'button', class: 'generate_button' }, `Générer ▶`)
-
-            const control = element_factory('div', { class: 'control' }, [
-                element_factory('label', undefined, [
-                    element_factory('div', undefined, `Année`),
-                    this.#year.get_elem(),
-                ]),
-                element_factory('label', undefined, [
-                    element_factory('div', undefined, `Cadeau·x/participant·e`),
-                    this.#gift_number.get_elem(),
-                ]),
-                generate_button,
-            ])
+            this.#giver_datas = []
 
             this.#root = element_factory('div', { class: 'next' }, [
                 control,
             ])
 
+            // // Init values
+            // for (const a_participant of this.#participant.participant_list)
+            //     this.#participant_add(a_participant)
+            // for (const a_group of this.#group.get_groups())
+            //     this.#group_add(a_group)
+            // for (const a_exchange of this.#history.get_exchanges())
+            //     this.#exchange_add(a_exchange)
+
             // Events
-            generate_button.addEventListener('click', () => { this.#control_generate() })
+            this.#participant.addEventListener('create', (event: CustomEvent<Participant.Participant>) => {
+                this.#participant_add(event.detail)
+            })
+            this.#group.addEventListener('create', (event: CustomEvent<Group.GroupType>) => {
+                this.#group_add(event.detail)
+            })
+            this.#history.addEventListener('create', (event: CustomEvent<History.ExchangeData>) => {
+                this.#exchange_add(event.detail)
+            })
+            this.#history.addEventListener('edited', (event: CustomEvent<History.ExchangeData>) => {
+                this.#exchange_edited(event.detail)
+            })
+            this.#history.addEventListener('delete', (event: CustomEvent<History.Uuid>) => {
+                this.#exchange_delete(event.detail)
+            })
         }
 
         get_elem() { return this.#root }
 
+        addEventListener<K extends keyof NextEventMap>(type: K, listener: (this: Participant.Participant, ev: NextEventMap[K]) => any, options?: boolean | AddEventListenerOptions): void {
+            this.#root.addEventListener(type as unknown as keyof HTMLElementEventMap, listener as (event: Event) => void, options)
+        }
+
+        #participant_add(participant: Participant.Participant) {
+            const other_participants: Array<Participant.Uuid> = []
+            const other_participants_scores: Record<Participant.Uuid, GiveToScore> = {}
+            const other_participants_black_lists: Record<Participant.Uuid, number> = {}
+            for (const other_giver_data of this.#giver_datas) {
+                // Other giver
+                other_giver_data.give_to_filtered_sorted.unshift(participant.uuid)
+                other_giver_data.give_to_scores[participant.uuid] = new GiveToScore()
+                other_giver_data.give_to_black_list_count[participant.uuid] = 0
+                // Added participant
+                other_participants.unshift(other_giver_data.uuid)
+                other_participants_scores[other_giver_data.uuid] = new GiveToScore()
+                other_participants_black_lists[other_giver_data.uuid] = 0
+            }
+            this.#giver_datas.push({
+                uuid: participant.uuid,
+                give_to_filtered_sorted: other_participants,
+                give_to_scores: other_participants_scores,
+                give_to_black_list_count: other_participants_black_lists,
+                linked_to: {},
+            })
+            participant.addEventListener('delete', () => { this.#participant_remove(participant) })
+        }
+        #participant_remove(participant: Participant.Participant) {
+            this.#giver_datas.splice(this.#giver_datas.findIndex(a_giver => a_giver.uuid == participant.uuid), 1)
+            for (const another_giver of this.#giver_datas) {
+                // Delete from array
+                const participant_index = another_giver.give_to_filtered_sorted.findIndex(a_uuid => a_uuid == participant.uuid)
+                if (participant_index >= 0)
+                    another_giver.give_to_filtered_sorted.splice(participant_index, 1)
+                // Delete from score record
+                delete another_giver.give_to_scores[participant.uuid]
+                // Delete from black lists record
+                delete another_giver.give_to_black_list_count[participant.uuid]
+            }
+        }
+        #group_add(group: Group.GroupType) {
+            switch (group.type_key) {
+                case 'mutual_exclusion':
+                case 'one_way_exclusion':
+                    const exclusion_group = group as Group.ExclusionGroupType
+                    let participants_from = exclusion_group.get_exclusion_from()
+                    let participants_to = exclusion_group.get_exclusion_to()
+                    this.#insert_participants_exclusions(participants_from, participants_to)
+                    group.addEventListener('update', () => {
+                        this.#remove_participants_exclusions(participants_from, participants_to)
+                        participants_from = exclusion_group.get_exclusion_from()
+                        participants_to = exclusion_group.get_exclusion_to()
+                        this.#insert_participants_exclusions(participants_from, participants_to)
+                    })
+                    group.addEventListener('delete', () => {
+                        this.#remove_participants_exclusions(participants_from, participants_to)
+                    })
+                    break;
+
+                case 'linked':
+                    const linked_group = group as Group.Linked
+                    let linked_participants = linked_group.get_linked_participants()
+                    this.#insert_participants_linked(linked_participants)
+                    linked_group.addEventListener('update', () => {
+                        this.#remove_participants_linked(linked_participants)
+                        linked_participants = linked_group.get_linked_participants()
+                        this.#insert_participants_linked(linked_participants)
+                    })
+                    linked_group.addEventListener('delete', () => {
+                        this.#remove_participants_linked(linked_participants)
+                    })
+                    break;
+
+                default:
+                    throw new Error(`Not implemented group type: ${group.type_key}`)
+            }
+
+        }
+        #insert_participants_exclusions(participants_from: Array<Participant.Uuid>, participants_to: Array<Participant.Uuid>) {
+            for (const excluded_from_uuid of participants_from) {
+                const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)!
+                for (const excluded_to_uuid of participants_to) {
+                    const previous_black_list_count = from_giver.give_to_black_list_count[excluded_to_uuid] || 0
+                    from_giver.give_to_black_list_count[excluded_to_uuid] = previous_black_list_count + 1
+                    if (previous_black_list_count == 0)
+                        from_giver.give_to_filtered_sorted.splice(from_giver.give_to_filtered_sorted.findIndex(a_uuid => a_uuid == excluded_to_uuid), 1)
+                }
+            }
+        }
+        #remove_participants_exclusions(participants_from: Array<Participant.Uuid>, participants_to: Array<Participant.Uuid>) {
+            for (const excluded_from_uuid of participants_from) {
+                const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)!
+                for (const excluded_to_uuid of participants_to) {
+                    const new_black_list_count = --from_giver.give_to_black_list_count[excluded_to_uuid]
+                    if (new_black_list_count == 0) {
+                        this.#sort_insert_give_to(from_giver, excluded_to_uuid)
+                    }
+                }
+            }
+        }
+        #insert_participants_linked(linked_participants: Array<Participant.Uuid>) {
+            for (const the_uuid of linked_participants) {
+                const the_giver = this.#giver_datas.find(a_giver => a_giver.uuid == the_uuid)!
+                for (const another_linked_uuid of linked_participants) {
+                    if (another_linked_uuid == the_uuid) continue;
+                    the_giver.linked_to[another_linked_uuid] = (the_giver.linked_to[another_linked_uuid] || 0) + 1
+                }
+            }
+        }
+        #remove_participants_linked(linked_participants: Array<Participant.Uuid>) {
+            for (const the_uuid of linked_participants) {
+                const the_giver = this.#giver_datas.find(a_giver => a_giver.uuid == the_uuid)!
+                for (const another_linked_uuid of linked_participants) {
+                    if (another_linked_uuid == the_uuid) continue;
+                    if (--the_giver.linked_to[another_linked_uuid] == 0)
+                        delete the_giver.linked_to[another_linked_uuid]
+                }
+            }
+        }
+        #compute_exchange_score(exchange_year: number): number {
+            return 1 / (2 ** (this.#exchange_score_ref_year - exchange_year))
+        }
+        #exchange_add(exchange: History.ExchangeData) {
+            const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == exchange.from_uuid)!
+            from_giver.give_to_scores[exchange.to_uuid].add(exchange.uuid, this.#compute_exchange_score(exchange.year))
+            this.#sort_insert_give_to(from_giver, exchange.to_uuid)
+        }
+        #exchange_edited(exchange: History.ExchangeData) {
+            const new_exchange_score = this.#compute_exchange_score(exchange.year)
+            for (const a_giver of this.#giver_datas)
+                for (const to_score of Object.values(a_giver.give_to_scores))
+                    if (to_score.update(exchange.uuid, new_exchange_score))
+                        return;
+        }
+        #exchange_delete(exchange_uuid: History.Uuid) {
+            for (const a_giver of this.#giver_datas)
+                for (const to_score of Object.values(a_giver.give_to_scores))
+                    if (to_score.remove(exchange_uuid))
+                        return;
+        }
+        #sort_insert_give_to(from_giver: GiverData, to_uuid: Participant.Uuid) {
+            // Remove (for update/move)
+            const found_index = from_giver.give_to_filtered_sorted.findIndex(a_uuid => a_uuid == to_uuid)
+            if (found_index >= 0)
+                from_giver.give_to_filtered_sorted.splice(found_index, 1)
+
+            // Insert
+            from_giver.give_to_filtered_sorted.splice( // Insert at index
+                from_giver.give_to_filtered_sorted.findIndex(next_uuid => {
+                    return from_giver.give_to_scores[to_uuid].value <= from_giver.give_to_scores[next_uuid].value
+                }),
+                0,
+                to_uuid
+            )
+        }
+        #update_exchange_score_ref_year(new_ref: number) {
+            const year_offset = new_ref - this.#exchange_score_ref_year
+            const update_ratio = 2 ** -year_offset
+
+            for (const a_giver of this.#giver_datas)
+                for (const to_uuid in a_giver.give_to_scores)
+                    a_giver.give_to_scores[to_uuid].multiply(update_ratio)
+
+            this.#exchange_score_ref_year = new_ref
+        }
+
+
         #control_generate() {
-            console.log(this.#year.value, this.#gift_number.value)
+            // TODO
+            // console.log(this.#year.value, this.#gift_number.value)
+        }
+
+        get_raw_data(): NextRawData {
+            return {
+                control: {
+                    year: this.#year.value_is_set() ? this.#year.value : undefined,
+                    gift_number: this.#gift_number.value_is_set() ? this.#gift_number.value : undefined,
+                },
+                result: undefined,
+            }
+        }
+        set_from_raw_data(raw_data: NextRawData) {
+            // Controls
+            if (raw_data.control.year !== undefined) {
+                this.#year.value = raw_data.control.year
+                this.#exchange_score_ref_year = raw_data.control.year
+            }
+            if (raw_data.control.gift_number !== undefined) {
+                this.#gift_number.value = raw_data.control.gift_number
+            }
+            // TODO Results
+            // Inner values
+            this.#giver_datas = []
+            for (const a_participant of this.#participant.participant_list)
+                this.#participant_add(a_participant)
+            for (const a_group of this.#group.get_groups())
+                this.#group_add(a_group)
+            for (const a_exchange of this.#history.get_exchanges())
+                this.#exchange_add(a_exchange)
         }
     }
 
