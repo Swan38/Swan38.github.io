@@ -1685,7 +1685,7 @@ export namespace Next {
                 }
                 get_sorted_receiver_left() {
                     return this.#sorted_possible_receiver
-                        .filter(value => !value.give_to)
+                        .filter(value => !value.give_to && value.receiver.receive_count < max_gift_number)
                 }
                 does_give_to(other: WorkGiver): boolean { return this.#sorted_possible_receiver.some(value => value.give_to && value.receiver == other) }
 
