@@ -468,7 +468,7 @@ label.tab_selection > svg {
     height: 1em;
     width: 1em;
 }
-.history .exchange {
+.exchange {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -476,30 +476,30 @@ label.tab_selection > svg {
 .history .exchange:not([data-uuid]) {
     opacity: .75;
 }
-.history .exchange:hover {
+.exchange:hover {
     background-color: var(--secondary-background-color);
 }
-.history .exchange > svg {
+.exchange > svg {
     font-size: large;
     height: 1em;
     width: 1em;
     /* padding: .125em; */
     flex-shrink: 0;
 }
-.history .exchange > button {
+.exchange > button {
     flex-shrink: 0;
     background-color: transparent;
     border: none;
     padding: 0;
     margin: 0;
 }
-.history .exchange > button > svg {
+.exchange > button > svg {
     font-size: large;
     height: 1em;
     width: 1em;
     padding: .125em;
 }
-.history .exchange > select {
+.exchange > select {
     flex-basis: 100%;
     flex-shrink: 1;
     display: block;
@@ -513,16 +513,25 @@ label.tab_selection > svg {
     font-weight: 500;
     /* padding: 0 1ch; */
 }
-.history .exchange > select > option {
+.exchange > select > option {
     background-color: var(--background-color);
     font-weight: inherit;
 }
-.history .exchange > select > option:not([value]) {
+.exchange > select > option:not([value]) {
     display: none;
 }
 
-.history .exchange > select[name="year"] {
+.exchange > select[name="year"] {
     flex-basis: 33%;
+}
+
+.exchange[from_equal_to] {
+    background: rgba(255, 70, 57, 0.3);
+}
+
+#history_view_year > button:hover > svg {
+    transform: rotate(90deg);
+    transition: transform .2s ease-out;
 }
 
 /* #endregion History */
@@ -786,6 +795,63 @@ input[type="checkbox"]:focus-visible::after {
     border-radius: 100vmax;
     margin-left: auto;
     margin-right: auto;
+}
+
+
+/* .next_exchanges .sort_options {
+    font-size: large;
+    margin: .5em 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: .5em;
+} */
+.next_exchanges .sort_options {
+    font-size: large;
+    margin: .5em 0;
+    display: flex;
+    gap: .5em;
+    flex-direction: row;
+    align-items: center;
+}
+.next_exchanges .sort_options > :first-child {
+    font-size: large;
+    height: 1em;
+    width: 1em;
+    flex-shrink: 0;
+}
+.next_exchanges .sort_options > button {
+    flex-basis: 100%;
+
+    display: block;
+    font-size: medium;
+    line-height: 1;
+    background: var(--secondary-background-color);
+    border: none;
+    margin: 0;
+    padding: .5em;
+    border-radius: .5em;
+}
+
+.next_exchanges > .add_next_exchange {
+    display: block;
+    background: var(--secondary-background-color);
+    border: none;
+    margin: .5em auto;
+    padding: .5em;
+    border-radius: .5em;
+    border-radius: 100vmax;
+}
+.next_exchanges > .add_next_exchange > svg {
+    display: block;
+    font-size: large;
+    height: 1em;
+    width: 1em;
+    line-height: 1;
+}
+
+.next_exchanges > .add_next_exchange:hover > svg {
+    transform: rotate(90deg);
+    transition: transform .2s ease-out;
 }
 
 /* #endregion Next christmas */

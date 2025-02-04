@@ -217,14 +217,23 @@ export namespace Participant {
         }
 
         participant_picker_factory(select_name: string, excluded_uuid?: string, default_text?: string, selected_uuid?: string): HTMLSelectElement {
-            function participant_option(participant: Participant): HTMLOptionElement {
+            let select: HTMLSelectElement
+
+            const participant_option = (participant: Participant): HTMLOptionElement => {
                 const option_elem = element_factory('option', { value: participant.uuid }, participant.name)
                 participant.addEventListener('update', () => { option_elem.innerText = participant.name })
-                participant.addEventListener('delete', () => { option_elem.remove() }, { once: true })
+                participant.addEventListener('delete', () => {
+                    option_elem.remove()
+                    if (option_elem.selected) {
+                        select.dispatchEvent(new Event('input'))
+                        select.dispatchEvent(new Event('change'))
+                        select.dispatchEvent(new Event('participant_update'))
+                    }
+                }, { once: true })
                 return option_elem
             }
 
-            const select = element_factory('select', { name: select_name }, this.participant_list.filter(participant => participant.uuid != excluded_uuid).map(participant_option))
+            select = element_factory('select', { name: select_name }, this.participant_list.filter(participant => participant.uuid != excluded_uuid).map(participant_option))
             if (default_text !== undefined)
                 select.insertAdjacentElement('afterbegin', element_factory('option', { selected: '' }, default_text))
             // Selected
@@ -611,7 +620,13 @@ export namespace History {
             }
 
             // Events
-            const picker_change_handler = () => { this.#exchange_change_handler(exchange) }
+            const picker_change_handler = () => {
+                if (from_picker.value == to_picker.value)
+                    exchange.setAttribute('from_equal_to', '')
+                else
+                    exchange.removeAttribute('from_equal_to')
+                this.#exchange_change_handler(exchange)
+            }
             from_picker.addEventListener('change', picker_change_handler)
             to_picker.addEventListener('change', picker_change_handler)
             delete_button.addEventListener('click', () => { this.#exchange_delete_handler(exchange) })
@@ -1325,20 +1340,6 @@ export namespace Next {
         'update': Event
     }
 
-    // interface Error {
-    //     name: string;
-    //     message: string;
-    //     stack?: string;
-    // }
-
-    // interface ErrorConstructor {
-    //     new (message?: string): Error;
-    //     (message?: string): Error;
-    //     readonly prototype: Error;
-    // }
-
-    // declare var Error: ErrorConstructor;
-
     interface ArrangementError extends Error {
         name: 'ArrangementError'
     }
@@ -1364,7 +1365,7 @@ export namespace Next {
         // Error
         #error_box: ErrorBox
         // Result
-        #result_exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }>
+        #next_exchanges_container: HTMLDivElement
 
         #exchange_score_ref_year: number
         #giver_datas: Array<GiverData>
@@ -1375,7 +1376,6 @@ export namespace Next {
             this.#group = group
 
             this.#giver_datas = []
-            this.#result_exchanges = []
 
             const control = (() => {
                 const DEFAULT_YEAR: number = (() => {
@@ -1426,9 +1426,34 @@ export namespace Next {
 
             this.#error_box = new ErrorBox()
 
+            const next_exchanges_editor = (() => {
+                this.#next_exchanges_container = element_factory('div')
+                const sort_next_from_btn = element_factory('button', { type: 'button' }, `Offreu·r·se`)
+                const sort_next_to_btn = element_factory('button', { type: 'button' }, `Receveu·r·se`)
+                const add_next_exchange_btn = element_factory('button', { type: 'button', class: 'add_next_exchange' }, svg_factory('/img/Add.svg'))
+
+                sort_next_from_btn.addEventListener('click', () => { this.#sort_result_exchange('from') })
+                sort_next_to_btn.addEventListener('click', () => { this.#sort_result_exchange('to') })
+                add_next_exchange_btn.addEventListener('click', () => { this.#add_result_exchange() })
+
+                return element_factory('div', { class: 'next_exchanges' }, [
+                    element_factory('div', { class: 'sort_options' }, [
+                        // element_factory('div', undefined, `Trier par`),
+                        svg_factory('/img/Sort.svg'),
+                        sort_next_from_btn,
+                        sort_next_to_btn,
+                    ]),
+                    this.#next_exchanges_container,
+                    add_next_exchange_btn,
+                ])
+            })()
+
             this.#root = element_factory('div', { class: 'next' }, [
                 control,
                 this.#error_box.get_elem(),
+                next_exchanges_editor,
+                // TODO save this year as csv
+                // TODO save .noel file for next year
             ])
 
             // // Init values
@@ -1793,10 +1818,71 @@ export namespace Next {
             }
         }
 
+        #add_result_exchange(from?: Participant.Uuid, to?: Participant.Uuid) {
+            const from_picker = this.#participant.participant_picker_factory('from', undefined, '▾ Offreu·r·se ▾', from)
+            const to_picker = this.#participant.participant_picker_factory('to', undefined, '▾ Receveu·r·se ▾', to)
+            const delete_button = element_factory('button', { type: 'button' }, svg_factory('/img/Delete.svg'))
+
+            const elem = element_factory('div', { class: 'exchange' }, [
+                from_picker,
+                svg_factory('/img/Arrow right.svg'),
+                to_picker,
+                delete_button,
+            ])
+
+            // Events
+            const picker_change_handler = () => {
+                if (from_picker.value == to_picker.value || !this.#giver_datas.find(giver => giver.uuid == from_picker.value)?.give_to_filtered_sorted.includes(to_picker.value))
+                    elem.setAttribute('from_equal_to', '')
+                else
+                    elem.removeAttribute('from_equal_to')
+                this.#root.dispatchEvent(new Event('update'))
+            }
+            const remove_exchange = () => {
+                elem.remove()
+                this.#root.dispatchEvent(new Event('update'))
+            }
+            const picker_selected_got_deleted_handler = () => {
+                if (!from_picker.selectedOptions[0].getAttribute('value') && !to_picker.selectedOptions[0].getAttribute('value'))
+                    remove_exchange()
+            }
+            from_picker.addEventListener('change', picker_change_handler)
+            to_picker.addEventListener('change', picker_change_handler)
+            from_picker.addEventListener('participant_update', picker_selected_got_deleted_handler)
+            to_picker.addEventListener('participant_update', picker_selected_got_deleted_handler)
+            delete_button.addEventListener('click', remove_exchange, { once: true })
+
+            this.#next_exchanges_container.insertAdjacentElement('beforeend', elem)
+        }
+        static #exchange_to_uuid(exchange: HTMLElement, by: 'from' | 'to'): Participant.Uuid | null {
+            const select = (exchange.querySelector(`select[name="${by}"]`) as HTMLSelectElement | null)
+            if (select === null)
+                return null
+            else
+                return select.selectedOptions[0].getAttribute('value')
+        }
+        #sort_result_exchange(by: 'from' | 'to') {
+            const exchange_to_name = (elem: HTMLElement): string => {
+                const uuid: Participant.Uuid | null = Editor.#exchange_to_uuid(elem, by)
+                if (uuid === null)
+                    return ''
+                else
+                    return this.#participant.get_participant_by_uuid(uuid)!.name
+            }
+            Array.from(this.#next_exchanges_container.children).sort((elem_a, elem_b) => exchange_to_name(elem_a as HTMLElement).localeCompare(exchange_to_name(elem_b as HTMLElement))).forEach(elem => this.#next_exchanges_container.appendChild(elem))
+        }
         #set_result(exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }>) {
-            this.#result_exchanges = exchanges
-            // TODO display results (editable)
-            console.log(exchanges)
+            this.#next_exchanges_container.innerHTML = ''
+            for (const exchange of exchanges)
+                this.#add_result_exchange(exchange.from, exchange.to)
+        }
+        get_result(): Array<{ from: Participant.Uuid, to: Participant.Uuid }> {
+            return Array.from(this.#next_exchanges_container.children)
+                .map(exchange_elem => ({
+                    from: Editor.#exchange_to_uuid(exchange_elem as HTMLElement, 'from'),
+                    to: Editor.#exchange_to_uuid(exchange_elem as HTMLElement, 'to'),
+                }))
+                .filter(exchange => exchange.from && exchange.to) as Array<{ from: Participant.Uuid, to: Participant.Uuid }>
         }
 
         get_raw_data(): NextRawData {
@@ -1806,7 +1892,7 @@ export namespace Next {
                     gift_number: this.#gift_number.value_is_set() ? this.#gift_number.value : undefined,
                     no_two_loop: this.#avoid_two_loop.checked,
                 },
-                result: this.#result_exchanges,
+                result: this.get_result(),
             }
         }
         set_from_raw_data(raw_data: NextRawData) {
