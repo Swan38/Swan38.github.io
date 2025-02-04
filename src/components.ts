@@ -1325,6 +1325,32 @@ export namespace Next {
         'update': Event
     }
 
+    // interface Error {
+    //     name: string;
+    //     message: string;
+    //     stack?: string;
+    // }
+
+    // interface ErrorConstructor {
+    //     new (message?: string): Error;
+    //     (message?: string): Error;
+    //     readonly prototype: Error;
+    // }
+
+    // declare var Error: ErrorConstructor;
+
+    interface ArrangementError extends Error {
+        name: 'ArrangementError'
+    }
+    function ArrangementError(message: string) {
+        const error = new Error(message) as ArrangementError
+        error.name = 'ArrangementError'
+        return error
+    }
+    function is_arrangement_error(error: Error): error is ArrangementError {
+        return error.name == ArrangementError.name
+    }
+
     export class Editor {
         #participant: Participant.Editor
         #history: History.Editor
@@ -1614,8 +1640,7 @@ export namespace Next {
             this.#exchange_score_ref_year = new_ref
         }
 
-
-        #control_generate() {
+        static #find_arrangement(giver_data: Array<GiverData>, no_two_loop: boolean, max_gift_number: number, participant: Participant.Editor): Array<{ from: Participant.Uuid, to: Participant.Uuid }> {
             class WorkGiver {
                 static link_record: Record<Participant.Uuid, WorkGiver> = {}
                 #uuid: Participant.Uuid
@@ -1672,57 +1697,46 @@ export namespace Next {
                 }
             }
 
-            const work_givers = this.#giver_datas.map(giver_data => new WorkGiver(giver_data))
+            const work_givers = giver_data.map(giver_data => new WorkGiver(giver_data))
             WorkGiver.init()
             work_givers.sort((before, after) => before.get_possible_receiver_left_count() - after.get_possible_receiver_left_count())
 
-            const NO_TWO_LOOP: boolean = this.#avoid_two_loop.checked
-            const MAX_GIFT_NUMBER: number = this.#gift_number.value
-            const TOTAL_MAX_GIFT_NUMBER: number = MAX_GIFT_NUMBER * work_givers.length
+            const TOTAL_MAX_GIFT_NUMBER: number = max_gift_number * work_givers.length
             let current_gift_number = 0
 
             { // Error prevention
-                if (work_givers.length - 1 < MAX_GIFT_NUMBER) {
-                    this.#error_box.set(`Vous demandez d'offrir plus de cadeaux (${MAX_GIFT_NUMBER}) qu'il y a d'autres participants (${work_givers.length} - 1).`)
-                    return
+                if (work_givers.length - 1 < max_gift_number) {
+                    throw ArrangementError(`Vous demandez d'offrir plus de cadeaux (${max_gift_number}) qu'il y a d'autres participants (${work_givers.length} - 1).`)
                 }
-                if (NO_TWO_LOOP && work_givers.length - 1 < MAX_GIFT_NUMBER * 2) {
-                    this.#error_box.set(`Vous demandez d'offrir et recevoir plus de cadeaux (${MAX_GIFT_NUMBER * 2}) qu'il y a d'autres participants (${work_givers.length} - 1). Diminuez le nombre de cadeau ou autorizez les boucles de deux.`)
-                    return
+                if (no_two_loop && work_givers.length - 1 < max_gift_number * 2) {
+                    throw ArrangementError(`Vous demandez d'offrir et recevoir plus de cadeaux (${max_gift_number * 2}) qu'il y a d'autres participants (${work_givers.length} - 1). Diminuez le nombre de cadeau ou autorizez les boucles de deux.`)
                 }
                 for (const a_participant of work_givers) {
-                    const a_participant_name = this.#participant.get_participant_by_uuid(a_participant.uuid)?.name
+                    const a_participant_name = participant.get_participant_by_uuid(a_participant.uuid)?.name
                     const givable: Set<Participant.Uuid> = new Set(a_participant.get_sorted_receiver_left().map(value => value.receiver.uuid))
                     const receivable: Set<Participant.Uuid> = new Set(work_givers.filter(giver => giver.get_sorted_receiver_left().map(value => value.receiver).includes(a_participant)).map(giver => giver.uuid))
 
                     if (givable.size == 0) {
-                        this.#error_box.set(`<b>${a_participant_name}</b> ne peut offrir de cadeaux à personne. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
-                        return
+                        throw ArrangementError(`<b>${a_participant_name}</b> ne peut offrir de cadeaux à personne. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
                     }
                     if (receivable.size == 0) {
-                        this.#error_box.set(`Personne ne peut offir de cadeau à <b>${a_participant_name}</b>. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
-                        return
+                        throw ArrangementError(`Personne ne peut offir de cadeau à <b>${a_participant_name}</b>. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
                     }
-                    if (givable.size < MAX_GIFT_NUMBER) {
-                        this.#error_box.set(`<b>${a_participant_name}</b> ne peut offir de cadeaux qu'à ${givable.size} personnes, moins que le nombre de cadeaux par personne (${MAX_GIFT_NUMBER}). Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
-                        return
+                    if (givable.size < max_gift_number) {
+                        throw ArrangementError(`<b>${a_participant_name}</b> ne peut offir de cadeaux qu'à ${givable.size} personnes, moins que le nombre de cadeaux par personne (${max_gift_number}). Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
                     }
-                    if (receivable.size < MAX_GIFT_NUMBER) {
-                        this.#error_box.set(`<b>${a_participant_name}</b> ne peut recevoir de la part cadeaux que de la part de ${receivable.size} personnes, moins que le nombre de cadeaux par personne (${MAX_GIFT_NUMBER}). Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
-                        return
+                    if (receivable.size < max_gift_number) {
+                        throw ArrangementError(`<b>${a_participant_name}</b> ne peut recevoir de la part cadeaux que de la part de ${receivable.size} personnes, moins que le nombre de cadeaux par personne (${max_gift_number}). Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
                     }
 
-                    if (NO_TWO_LOOP) {
+                    if (no_two_loop) {
                         const givable_or_receivable: Set<Participant.Uuid> = new Set([...givable, ...receivable])
 
-                        if (givable_or_receivable.size < MAX_GIFT_NUMBER * 2) {
-                            this.#error_box.set(`<b>${a_participant_name}</b> ne peut offir et/ou recevoir de cadeaux seulement avec ${givable_or_receivable.size} personnes, moins que le double du nombre de cadeaux par personne (${MAX_GIFT_NUMBER * 2}). L'option "Pas de boucle de deux" empèche d'offrir un cadeau à quelqu'un qui vous en offre un. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
-                            return
+                        if (givable_or_receivable.size < max_gift_number * 2) {
+                            throw ArrangementError(`<b>${a_participant_name}</b> ne peut offir et/ou recevoir de cadeaux seulement avec ${givable_or_receivable.size} personnes, moins que le double du nombre de cadeaux par personne (${max_gift_number * 2}). L'option "Pas de boucle de deux" empèche d'offrir un cadeau à quelqu'un qui vous en offre un. Regardez les groupes d'exclusion à sens unique et/ou mutuelles.`)
                         }
                     }
                 }
-
-                this.#error_box.clear()
             }
 
             /**
@@ -1732,11 +1746,11 @@ export namespace Next {
              */
             function recursive_find_arrangement(): boolean {
                 for (const giver of work_givers) {
-                    if (giver.give_count == MAX_GIFT_NUMBER) continue;
-                    if (giver.give_count > MAX_GIFT_NUMBER) throw new Error(`give_count too high`);
+                    if (giver.give_count == max_gift_number) continue;
+                    if (giver.give_count > max_gift_number) throw new Error(`give_count too high`);
                     giver.give_count++
                     for (const receiver of giver.get_sorted_receiver_left()) {
-                        if (NO_TWO_LOOP && receiver.receiver.does_give_to(giver)) continue; // No direct loop back
+                        if (no_two_loop && receiver.receiver.does_give_to(giver)) continue; // No direct loop back
 
                         receiver.give_to = true
                         receiver.receiver.receive_count++
@@ -1755,16 +1769,33 @@ export namespace Next {
                 return false
             }
             if (!recursive_find_arrangement()) {
-                this.#error_box.set(`Aucun arrangement n'est possible avec les contriantes données. Diminuez ne nombre de cadeaux, autorisez les boucles de deux ou retirer des exclusions.`)
-                return
+                throw ArrangementError(`Aucun arrangement n'est possible avec les contriantes données. Diminuez ne nombre de cadeaux, autorisez les boucles de deux ou retirer des exclusions.`)
             }
 
-            this.#set_result(work_givers.map(giver => giver.get_result_receivers().map(receiver_uuid => ({ from: giver.uuid, to: receiver_uuid }))).flat())
-            this.#root.dispatchEvent(new Event('update'))
+            return work_givers.map(giver => giver.get_result_receivers().map(receiver_uuid => ({ from: giver.uuid, to: receiver_uuid }))).flat()
+        }
+
+        #control_generate() {
+            try {
+                this.#error_box.clear()
+                this.#set_result(Editor.#find_arrangement(
+                    this.#giver_datas,
+                    this.#avoid_two_loop.checked,
+                    this.#gift_number.value,
+                    this.#participant
+                ))
+                this.#root.dispatchEvent(new Event('update'))
+            } catch (error) {
+                if (is_arrangement_error(error as Error)) {
+                    this.#error_box.set((error as ArrangementError).message)
+                } else
+                    throw error
+            }
         }
 
         #set_result(exchanges: Array<{ from: Participant.Uuid, to: Participant.Uuid }>) {
             this.#result_exchanges = exchanges
+            // TODO display results (editable)
             console.log(exchanges)
         }
 
