@@ -1409,7 +1409,7 @@ export namespace Next {
                         this.#year.get_elem(),
                     ]),
                     element_factory('label', undefined, [
-                        element_factory('div', undefined, `Cadeau·x/participant·e`),
+                        element_factory('div', undefined, `Cadeau·x par participant·e`),
                         this.#gift_number.get_elem(),
                     ]),
                     element_factory('label', undefined, [

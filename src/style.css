@@ -784,6 +784,8 @@ input[type="checkbox"]:focus-visible::after {
 .next .control > label > :first-child {
     flex-grow: 1;
     flex-shrink: 1;
+    word-wrap: break-word;
+    width: min-content;
 }
 .next .control .generate_button {
     display: block;
