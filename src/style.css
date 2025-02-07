@@ -873,6 +873,9 @@ input[type="checkbox"]:focus-visible::after {
     border: none;
     border-radius: .5em;
 }
+.next .save_section > button:active {
+    background: var(--dark-green);
+}
 .next .save_section > button > svg {
     --svg-size: 1.5em;
     height: var(--svg-size);
@@ -884,6 +887,31 @@ input[type="checkbox"]:focus-visible::after {
     text-align: center;
     font-size: medium;
     margin-top: .5em;
+}
+
+.next .save_section > button.copy_button {
+    position: relative;
+    overflow: hidden;
+}
+.next .save_section > button.copy_button::after {
+    content: '✔';
+    position: absolute;
+    line-height: 1;
+    top: .5em;
+    right: .5em;
+    opacity: .0;
+    transform: translateX(0);
+    transition:
+        opacity .75s .75s ease-in,
+        transform .1s ease-out;
+}
+.next .save_section > button.copy_button:active:after {
+    opacity: 1;
+    right: .5em;
+    transform: translateX(calc(.5em + 100%));
+    transition:
+        opacity 0s,
+        transform 0s;
 }
 
 /* #endregion Next christmas */

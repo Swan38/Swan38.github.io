@@ -1450,7 +1450,7 @@ export namespace Next {
 
             const save_section: HTMLDivElement = (() => {
                 // Copy
-                const copy_button = element_factory('button', { type: 'button' }, [
+                const copy_button = element_factory('button', { type: 'button', class: 'copy_button' }, [
                     svg_factory('/img/Copy.svg'),
                     element_factory('div', undefined, `Copier un résumé`),
                 ])
@@ -1915,7 +1915,8 @@ export namespace Next {
         }
 
         #copy_result_abstract() {
-            // TODO copy_result_abstract
+            const abstract: string = this.get_result().map(exchange => `${this.#participant.get_participant_by_uuid(exchange.from)?.name} → ${this.#participant.get_participant_by_uuid(exchange.to)?.name}`).join('\n')
+            navigator.clipboard.writeText(abstract)
         }
         #download_result_year() {
             // TODO download_result_year
