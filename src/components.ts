@@ -1,5 +1,6 @@
 import SVGInjector from "svg-injector"
 import { v4 as uuid } from 'uuid'
+import FileSaver from "file-saver"
 
 import { Cookie } from "./cookies"
 
@@ -1919,7 +1920,12 @@ export namespace Next {
             navigator.clipboard.writeText(abstract)
         }
         #download_result_year() {
-            // TODO download_result_year
+            const csv_content = ['"Offreu·r·se","Receveu·r·se"'].concat(
+                this.get_result().map(
+                    exchange => `"${this.#participant.get_participant_by_uuid(exchange.from)?.name}","${this.#participant.get_participant_by_uuid(exchange.to)?.name}"`)
+            ).join('\n')
+            const blob_csv = new Blob([csv_content], { type: 'text/plain;charset=utf-8' })
+            FileSaver.saveAs(blob_csv, `Distribution Noël ${this.#year.value}.csv`, { autoBom: true })
         }
         #download_result_with_history() {
             // TODO download_result_with_history
