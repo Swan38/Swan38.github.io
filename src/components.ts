@@ -1928,7 +1928,21 @@ export namespace Next {
             FileSaver.saveAs(blob_csv, `Distribution Noël ${this.#year.value}.csv`, { autoBom: true })
         }
         #download_result_with_history() {
-            // TODO download_result_with_history
+            const next_year: number = this.#year.value
+            const future_raw_data: RawData.Agregation = RawData.get_raw_data(this.#participant, this.#history, this.#group, this)
+            future_raw_data.next.result.forEach(next_exchange => {
+                future_raw_data.history.push({
+                    uuid: uuid(),
+                    from_uuid: next_exchange.from,
+                    to_uuid: next_exchange.to,
+                    year: next_year,
+                })
+            })
+            future_raw_data.next.result = []
+            future_raw_data.next.control.year = next_year + 1
+
+            const for_next_year_blob = new Blob([JSON.stringify(future_raw_data)], { type: 'text/plain;charset=utf-8' })
+            FileSaver.saveAs(for_next_year_blob, `Historique jusqu'à ${next_year}.noel`, { autoBom: true })
         }
 
         get_raw_data(): NextRawData {
@@ -1965,3 +1979,27 @@ export namespace Next {
     }
 
 } // namespace Next
+
+export namespace RawData { // Raw data storage
+    export type Agregation = {
+        participants: Participant.ParticipantListRawData
+        history: History.HistoryRawData
+        groups: Group.GroupListRawData
+        next: Next.NextRawData
+    }
+
+    export function get_raw_data(participant: Participant.Editor, history: History.Editor, group: Group.Editor, next: Next.Editor): Agregation {
+        return {
+            participants: participant.get_raw_data(),
+            history: history.get_raw_data(),
+            groups: group.get_raw_data(),
+            next: next.get_raw_data(),
+        }
+    }
+    export function set_raw_data(raw_data: Agregation, participant: Participant.Editor, history: History.Editor, group: Group.Editor, next: Next.Editor) {
+        participant.set_from_raw_data(raw_data.participants)
+        history.set_from_raw_data(raw_data.history)
+        group.set_from_raw_data(raw_data.groups)
+        next.set_from_raw_data(raw_data.next)
+    }
+}
