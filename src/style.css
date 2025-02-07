@@ -797,6 +797,18 @@ input[type="checkbox"]:focus-visible::after {
     margin-left: auto;
     margin-right: auto;
 }
+.next .control .generate_button:active {
+    background: var(--dark-green);
+}
+
+
+.next .next_exchanges_container:not(:has(*))::before {
+    content: '⁝';
+    display: block;
+    text-align: center;
+    font-weight: 900;
+    opacity: .5;
+}
 
 
 .next_exchanges .sort_options {
@@ -866,6 +878,10 @@ input[type="checkbox"]:focus-visible::after {
     background: var(--green);
     border: none;
     border-radius: .5em;
+}
+.next .save_section > button:disabled {
+    background: var(--disabled-color);
+    pointer-events: none;
 }
 .next .save_section > button:active {
     background: var(--dark-green);

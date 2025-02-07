@@ -1428,7 +1428,7 @@ export namespace Next {
             this.#error_box = new ErrorBox()
 
             const next_exchanges_editor = (() => {
-                this.#next_exchanges_container = element_factory('div')
+                this.#next_exchanges_container = element_factory('div', { class: 'next_exchanges_container' })
                 const sort_next_from_btn = element_factory('button', { type: 'button' }, `Offreu·r·se`)
                 const sort_next_to_btn = element_factory('button', { type: 'button' }, `Receveu·r·se`)
                 const add_next_exchange_btn = element_factory('button', { type: 'button', class: 'add_next_exchange' }, svg_factory('/img/Add.svg'))
@@ -1470,6 +1470,17 @@ export namespace Next {
                     element_factory('div', undefined, `Exporter avec tout l'historique pour ne rien re-saisire l'année prochaine`),
                 ])
                 noel_button.addEventListener('click', () => { this.#download_result_with_history() })
+
+                const evaluate_disabled = () => {
+                    const disabled = this.#next_exchanges_container.children.length == 0
+                    copy_button.disabled = disabled
+                    csv_button.disabled = disabled
+                    noel_button.disabled = disabled
+                }
+                setTimeout(() => {
+                    this.addEventListener('update', evaluate_disabled)
+                    evaluate_disabled()
+                }, 0)
 
                 // Save section
                 return element_factory('div', { class: 'save_section' }, [
