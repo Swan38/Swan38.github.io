@@ -30,7 +30,7 @@ container_next.insertAdjacentElement('beforeend', next.get_elem())
 
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'
-    function write_raw_data(raw_data: ComponentRawData.Agregation) {
+    export function write_raw_data(raw_data: ComponentRawData.Agregation) {
         if (raw_data.participants.length > 0)
             Cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
         else
@@ -77,7 +77,7 @@ namespace RawData { // Raw data storage
     next.addEventListener('update', () => { debounce_store_raw_data(0) })
 }
 
-{ // Tutorial or main app
+namespace Tutorial { // Tutorial or main app
     if (RawData.is_raw_data_stored()) {
         tutorial.style.display = 'none'
         RawData.setup_raw_data()
@@ -85,28 +85,52 @@ namespace RawData { // Raw data storage
     else
         tab_layout.style.display = 'none';
 
+    export function leave_tutorial() {
+        tutorial.style.display = 'none'
+        tab_layout.style.display = ''
+        tab_layout.classList.add('appear')
+    }
+
     (document.getElementById('start_button') as HTMLButtonElement).onclick = () => {
         tutorial.classList.add('disappear')
-        setTimeout(() => {
-            tutorial.style.display = 'none'
-            tab_layout.style.display = ''
-            tab_layout.classList.add('appear')
-        }, 500)
+        setTimeout(leave_tutorial, 500)
     }
-}
+} // namespace Tutorial
 
 { // Drop file area
     const drop_area: HTMLLabelElement = document.getElementById('file_input_label') as HTMLLabelElement
     const drop_input: HTMLInputElement = drop_area.querySelector('input[type="file"]')!
 
     drop_area.ondragenter = () => { drop_area.setAttribute('hover_drop', '') }
-    drop_area.ondragleave = (event) => { console.log(event); drop_area.removeAttribute('hover_drop') }
+    drop_area.ondragleave = () => { drop_area.removeAttribute('hover_drop') }
     drop_area.ondragover = drop_area.ondragenter = (event) => { event.preventDefault() }
 
     drop_area.ondrop = (event) => {
         drop_input.files = event.dataTransfer?.files || null
         event.preventDefault()
+        drop_input.dispatchEvent(new Event('change'))
     }
+
+    drop_input.addEventListener('change', () => {
+        if (drop_input.files?.length != 1) return;
+        const file: File = drop_input.files[0]
+        if (!file.name.endsWith('.noel')) return;
+
+        const file_reader = new FileReader()
+        file_reader.onload = () => {
+            const file_content = file_reader.result as string
+            const file_raw_data = JSON.parse(file_content) as ComponentRawData.Agregation
+            console.log(`Loading file with content:`, file_raw_data)
+            RawData.write_raw_data(file_raw_data)
+            ComponentRawData.set_raw_data(
+                file_raw_data,
+                participant, history, group, next)
+            Tutorial.leave_tutorial()
+        }
+        file_reader.readAsText(file, 'utf-8')
+
+        // console.log(`Loading file:`, drop_input.files)
+    })
 }
 
 { // Persistent tabs
