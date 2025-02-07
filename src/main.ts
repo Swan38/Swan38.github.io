@@ -120,7 +120,6 @@ namespace Tutorial { // Tutorial or main app
         file_reader.onload = () => {
             const file_content = file_reader.result as string
             const file_raw_data = JSON.parse(file_content) as ComponentRawData.Agregation
-            console.log(`Loading file with content:`, file_raw_data)
             RawData.write_raw_data(file_raw_data)
             ComponentRawData.set_raw_data(
                 file_raw_data,

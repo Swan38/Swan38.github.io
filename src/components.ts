@@ -473,16 +473,12 @@ export namespace History {
             for (const exchange of this.#exchanges) {
                 if (exchange.from_uuid == deleted_participant_uuid || exchange.to_uuid == deleted_participant_uuid) {
                     const deleted_exchange_uuid = exchange.uuid
-                    this.#exchanges.splice(this.#exchanges.findIndex(old_exchange => old_exchange.uuid == deleted_exchange_uuid), 1)
-                    for (const view of this.#views)
-                        view.exchange_deleted(deleted_exchange_uuid)
-                    // this.#root.dispatchEvent(new CustomEvent('delete', { detail: deleted_exchange_uuid }))
-                    this.#root.dispatchEvent(new Event('update'))
+                    this.#handle_delete(deleted_exchange_uuid)
                 }
             }
         }
 
-        #other_views(a_view_element: HTMLElement): Array<View> {
+        #other_views(a_view_element: HTMLElement | undefined): Array<View> {
             return this.#views.filter(view => view.get_elem() != a_view_element)
         }
         #handle_create(event: CustomEvent<ExchangeData>) {
@@ -501,10 +497,13 @@ export namespace History {
             this.#root.dispatchEvent(new CustomEvent('edited', { detail: new_exchange }))
             this.#root.dispatchEvent(new Event('update'))
         }
-        #handle_delete(event: CustomEvent<string>) {
-            const deleted_uuid = event.detail
-            this.#exchanges.splice(this.#exchanges.findIndex(old_exchange => old_exchange.uuid == deleted_uuid), 1)
-            for (const view of this.#other_views(event.target as HTMLElement))
+        #handle_delete(event: Uuid | CustomEvent<string>) {
+            const event_is_uuid = typeof event === 'string'
+            const deleted_uuid = event_is_uuid ? event : event.detail
+            const deleted_index = this.#exchanges.findIndex(old_exchange => old_exchange.uuid == deleted_uuid)
+            if (deleted_index < 0) return;
+            this.#exchanges.splice(deleted_index, 1)
+            for (const view of this.#other_views(event_is_uuid ? undefined : event.target as HTMLElement))
                 view.exchange_deleted(deleted_uuid)
             this.#root.dispatchEvent(new CustomEvent('delete', { detail: deleted_uuid }))
             this.#root.dispatchEvent(new Event('update'))
@@ -653,8 +652,7 @@ export namespace History {
         }
         exchange_deleted(uuid: string): void {
             const outdated_exchange_elem = this.#root.querySelector(`div.exchange[data-uuid="${uuid}"]`)
-            if (outdated_exchange_elem === null)
-                throw new Error("Outdated exchange couldn't be found.")
+            if (outdated_exchange_elem === null) return; // Deletion echo
             outdated_exchange_elem.remove()
         }
     }
@@ -812,8 +810,7 @@ export namespace History {
         }
         exchange_deleted(uuid: string): void {
             const outdated_exchange_elem = this.#root.querySelector(`div.exchange[data-uuid="${uuid}"]`)
-            if (outdated_exchange_elem === null)
-                throw new Error("Outdated exchange couldn't be found.")
+            if (outdated_exchange_elem === null) return; // Deletion echo
             outdated_exchange_elem.remove()
         }
     }
@@ -2013,4 +2010,4 @@ export namespace RawData { // Raw data storage
         group.set_from_raw_data(raw_data.groups)
         next.set_from_raw_data(raw_data.next)
     }
-}
+} // namespace RawData
