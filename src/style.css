@@ -266,7 +266,7 @@ button > svg {
 
 #tab_layout {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     grid-template-rows: 0fr 1fr;
 }
 
@@ -502,6 +502,7 @@ label.tab_selection > svg {
 .exchange > select {
     flex-basis: 100%;
     flex-shrink: 1;
+    width: 100%;
     display: block;
 
     background: none;
@@ -798,13 +799,6 @@ input[type="checkbox"]:focus-visible::after {
 }
 
 
-/* .next_exchanges .sort_options {
-    font-size: large;
-    margin: .5em 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: .5em;
-} */
 .next_exchanges .sort_options {
     font-size: large;
     margin: .5em 0;
@@ -856,7 +850,7 @@ input[type="checkbox"]:focus-visible::after {
 
 .next .save_section {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     font-size: medium;
     gap: .5em;
 }
