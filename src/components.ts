@@ -1915,7 +1915,7 @@ export namespace Next {
         }
 
         #copy_result_abstract() {
-            const abstract: string = this.get_result().map(exchange => `${this.#participant.get_participant_by_uuid(exchange.from)?.name} → ${this.#participant.get_participant_by_uuid(exchange.to)?.name}`).join('\n')
+            const abstract: string = this.get_result().map(exchange => `${this.#participant.get_participant_by_uuid(exchange.from)?.name} → ${this.#participant.get_participant_by_uuid(exchange.to)?.name}`).join(',\n')
             navigator.clipboard.writeText(abstract)
         }
         #download_result_year() {
