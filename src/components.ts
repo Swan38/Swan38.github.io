@@ -1448,12 +1448,41 @@ export namespace Next {
                 ])
             })()
 
+            const save_section: HTMLDivElement = (() => {
+                // Copy
+                const copy_button = element_factory('button', { type: 'button' }, [
+                    svg_factory('/img/Copy.svg'),
+                    element_factory('div', undefined, `Copier un résumé`),
+                ])
+                copy_button.addEventListener('click', () => { this.#copy_result_abstract() })
+
+                // this_year.csv
+                const csv_button = element_factory('button', { type: 'button' }, [
+                    svg_factory('/img/File download.svg'),
+                    element_factory('div', undefined, `Exporter au format .csv`),
+                ])
+                csv_button.addEventListener('click', () => { this.#download_result_year() })
+
+                // up_to_this_year.noel
+                const noel_button = element_factory('button', { type: 'button' }, [
+                    svg_factory('/img/File download.svg'),
+                    element_factory('div', undefined, `Exporter avec tout l'historique pour ne rien re-saisire l'année prochaine`),
+                ])
+                noel_button.addEventListener('click', () => { this.#download_result_with_history() })
+
+                // Save section
+                return element_factory('div', { class: 'save_section' }, [
+                    copy_button,
+                    csv_button,
+                    noel_button,
+                ])
+            })()
+
             this.#root = element_factory('div', { class: 'next' }, [
                 control,
                 this.#error_box.get_elem(),
                 next_exchanges_editor,
-                // TODO save this year as csv
-                // TODO save .noel file for next year
+                save_section,
             ])
 
             // // Init values
@@ -1883,6 +1912,16 @@ export namespace Next {
                     to: Editor.#exchange_to_uuid(exchange_elem as HTMLElement, 'to'),
                 }))
                 .filter(exchange => exchange.from && exchange.to) as Array<{ from: Participant.Uuid, to: Participant.Uuid }>
+        }
+
+        #copy_result_abstract() {
+            // TODO copy_result_abstract
+        }
+        #download_result_year() {
+            // TODO download_result_year
+        }
+        #download_result_with_history() {
+            // TODO download_result_with_history
         }
 
         get_raw_data(): NextRawData {

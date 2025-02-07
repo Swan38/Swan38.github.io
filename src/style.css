@@ -854,4 +854,36 @@ input[type="checkbox"]:focus-visible::after {
     transition: transform .2s ease-out;
 }
 
+.next .save_section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    font-size: medium;
+    gap: .5em;
+}
+.next .save_section > :last-child {
+    grid-column-start: 1;
+    grid-column-end: 3;
+}
+
+.next .save_section > button {
+    font-size: inherit;
+    margin: 0;
+    padding: .5em;
+    background: var(--green);
+    border: none;
+    border-radius: .5em;
+}
+.next .save_section > button > svg {
+    --svg-size: 1.5em;
+    height: var(--svg-size);
+    width: var(--svg-size);
+    display: block;
+    margin: 0 auto;
+}
+.next .save_section > button > div {
+    text-align: center;
+    font-size: medium;
+    margin-top: .5em;
+}
+
 /* #endregion Next christmas */
