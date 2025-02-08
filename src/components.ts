@@ -527,7 +527,8 @@ export namespace History {
             for (const view of this.#views) {
                 view.reset()
                 for (const exchange_data of raw_data)
-                    view.exchange_created(exchange_data)
+                    if (ALLOWED_YEAR_LIST.includes(exchange_data.year))
+                        view.exchange_created(exchange_data)
             }
             this.#exchanges = raw_data
         }
