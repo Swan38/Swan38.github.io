@@ -39,6 +39,23 @@ function svg_factory(src: string): HTMLElement {
     return img_elem
 }
 
+export interface UpdatedDataDetail {
+    target: HTMLElement
+    debounce_timeout_ms?: number
+    max_delay_ms?: number
+}
+
+function update_data_event(target: HTMLElement, options?: { debounce_timeout_ms?: number, max_delay_ms?: number }): void | (() => void) {
+    document.dispatchEvent(new CustomEvent<UpdatedDataDetail>('update_data_event', {
+        detail: {
+            target: target,
+            debounce_timeout_ms: options?.debounce_timeout_ms,
+            max_delay_ms: options?.max_delay_ms,
+        }
+    }))
+}
+
+
 interface InputNumberAttributes {
     value?: number
     min?: number
@@ -106,8 +123,8 @@ class InputNumber {
     get value() {
         return parseInt(this.#input.value) || parseInt(this.#input.placeholder)
     }
-    set value(value: number) {
-        this.#input.value = value.toString()
+    set value(value: number | undefined) {
+        this.#input.value = value?.toString() || ''
     }
     value_is_set(): boolean { return this.#input.value.length > 0 }
 
@@ -157,7 +174,6 @@ export namespace Participant {
 
     interface ParticipantListEventMap {
         "create": CustomEvent<Participant>
-        "update": Event
     }
 
     export type ParticipantListRawData = Array<ParticipantRawData>
@@ -203,13 +219,9 @@ export namespace Participant {
             new_participant.addEventListener('create', () => {
                 this.#participant_list.push(new_participant)
                 this.#root.dispatchEvent(new CustomEvent('create', { detail: new_participant }))
-                this.#root.dispatchEvent(new Event('update'))
-                new_participant.addEventListener('update', () => {
-                    this.#root.dispatchEvent(new Event('update'))
-                })
                 new_participant.addEventListener('delete', () => {
                     this.#participant_list.splice(this.#participant_list.indexOf(new_participant), 1)
-                    this.#root.dispatchEvent(new Event('update'))
+                    update_data_event(new_participant.get_elem())
                 }, { once: true })
             }, { once: true })
 
@@ -269,12 +281,9 @@ export namespace Participant {
                 this.#participant_list.push(new_participant)
 
                 // Events
-                new_participant.addEventListener('update', () => {
-                    this.#root.dispatchEvent(new Event('update'))
-                })
                 new_participant.addEventListener('delete', () => {
                     this.#participant_list.splice(this.#participant_list.indexOf(new_participant), 1)
-                    this.#root.dispatchEvent(new Event('update'))
+                    update_data_event(new_participant.get_elem())
                 }, { once: true })
 
                 this.#participants_list_container.insertAdjacentElement('beforeend', new_participant.get_elem())
@@ -284,7 +293,7 @@ export namespace Participant {
 
     interface ParticipantEventMap {
         "create": Event // Fired only once
-        "update": Event
+        "update": Event // The name changed
         "delete": Event // Fired only once
     }
 
@@ -323,6 +332,7 @@ export namespace Participant {
                 })
             }
             this.#input.addEventListener('input', this.#first_input_listener, { once: true })
+            this.#input.addEventListener('input', () => { update_data_event(this.#input, { debounce_timeout_ms: 700, max_delay_ms: 1000 }) })
             // New participant on enter key up
             this.#input.addEventListener('keyup', (event) => {
                 if (event.key === 'Enter' && this.#input.value.length > 0) this.#parent_list.add_participant()
@@ -388,7 +398,6 @@ export namespace History {
     }
 
     interface HistoryEventMap {
-        'update': Event
         'create': CustomEvent<ExchangeData>
         'edited': CustomEvent<ExchangeData>
         'delete': CustomEvent<Uuid>
@@ -487,7 +496,7 @@ export namespace History {
             for (const view of this.#other_views(event.target as HTMLElement))
                 view.exchange_created(new_exchange)
             this.#root.dispatchEvent(new CustomEvent('create', { detail: new_exchange }))
-            this.#root.dispatchEvent(new Event('update'))
+            update_data_event(this.#root)
         }
         #handle_udpate(event: CustomEvent<ExchangeData>) {
             const new_exchange = event.detail
@@ -495,7 +504,7 @@ export namespace History {
             for (const view of this.#other_views(event.target as HTMLElement))
                 view.exchange_updated(new_exchange)
             this.#root.dispatchEvent(new CustomEvent('edited', { detail: new_exchange }))
-            this.#root.dispatchEvent(new Event('update'))
+            update_data_event(this.#root)
         }
         #handle_delete(event: Uuid | CustomEvent<string>) {
             const event_is_uuid = typeof event === 'string'
@@ -506,7 +515,7 @@ export namespace History {
             for (const view of this.#other_views(event_is_uuid ? undefined : event.target as HTMLElement))
                 view.exchange_deleted(deleted_uuid)
             this.#root.dispatchEvent(new CustomEvent('delete', { detail: deleted_uuid }))
-            this.#root.dispatchEvent(new Event('update'))
+            update_data_event(this.#root)
         }
 
         get_exchanges(): Array<ExchangeData> { return this.#exchanges }
@@ -821,7 +830,6 @@ export namespace Group {
 
     interface GroupListEventMap {
         'create': CustomEvent<GroupType>
-        'update': Event
     }
     export type GroupListRawData = Array<GroupRawData>
 
@@ -883,12 +891,12 @@ export namespace Group {
             // Events
             new_group.addEventListener('update', () => {
                 new_group_raw_data.raw_data = new_group.get_raw_data()
-                this.#root.dispatchEvent(new Event('update'))
+                update_data_event(this.#root)
             })
             new_group.addEventListener('delete', () => {
                 this.#groups_raw_data.splice(this.#groups_raw_data.indexOf(new_group_raw_data), 1)
                 this.#groups.splice(this.#groups.indexOf(new_group), 1)
-                this.#root.dispatchEvent(new Event('update'))
+                update_data_event(this.#root)
             }, { once: true })
         }
 
@@ -910,7 +918,8 @@ export namespace Group {
 
         get_groups(): Array<GroupType> { return this.#groups }
 
-        get_raw_data(): GroupListRawData { return this.#groups_raw_data }
+        // get_raw_data(): GroupListRawData { return this.#groups_raw_data }
+        get_raw_data(): GroupListRawData { return this.#groups.filter(group => group.test_non_empty()).map(group => group.get_typed_raw_data()) }
         set_from_raw_data(raw_data: GroupListRawData) {
             for (const elem of Array.from(this.#root.children).slice(1))
                 elem.remove()
@@ -943,7 +952,7 @@ export namespace Group {
     }
 
     interface GroupTypeEventMap {
-        'update': Event
+        'update': Event // The group participants changed
         'delete': Event
     }
 
@@ -954,6 +963,8 @@ export namespace Group {
         // get_icon(): HTMLElement; // incompatible with static
         // get_short_text(): string; // incompatible with static
         get_raw_data(): AnyGroupRawData;
+        get_typed_raw_data(): GroupRawData;
+        test_non_empty(): boolean;
         set_from_raw_data(raw_data: AnyGroupRawData): void;
     }
 
@@ -1049,6 +1060,14 @@ export namespace Group {
         get_exclusion_to(): Array<Participant.Uuid> { return this.get_raw_data() }
 
         get_raw_data(): MutualExclusionGroupRawData { return Array.from(this.#member_list.children, elem => (elem as HTMLElement).dataset.uuid!) }
+        get_typed_raw_data(): GroupRawData {
+            return { type_key: this.type_key, raw_data: this.get_raw_data() }
+        }
+        test_non_empty(): boolean {
+            const raw_data = this.get_raw_data()
+            const uuid_exists = (uuid: Participant.Uuid) => this.#participant_list.get_participant_by_uuid(uuid) !== undefined
+            return raw_data.length > 0 && raw_data.every(uuid_exists)
+        }
         set_from_raw_data(raw_data: MutualExclusionGroupRawData): void {
             this.#member_list.innerHTML = ''
             for (const member_uuid of raw_data.reverse())
@@ -1178,6 +1197,14 @@ export namespace Group {
                 to: this.get_exclusion_to(),
             }
         }
+        get_typed_raw_data(): GroupRawData {
+            return { type_key: this.type_key, raw_data: this.get_raw_data() }
+        }
+        test_non_empty(): boolean {
+            const raw_data = this.get_raw_data()
+            const uuid_exists = (uuid: Participant.Uuid) => this.#participant_list.get_participant_by_uuid(uuid) !== undefined
+            return raw_data.from.length > 0 && raw_data.to.length > 0 && raw_data.from.every(uuid_exists) && raw_data.to.every(uuid_exists)
+        }
         set_from_raw_data(raw_data: OneWayExclusionGroupRawData): void {
             // From
             this.#member_from_list.innerHTML = ''
@@ -1235,7 +1262,9 @@ export namespace Group {
         static get_short_text(): string { return 'Liés, couple…' }
 
         #add_member_by_uuid(uuid: string) {
-            this.#add_member(this.#participant_list.get_participant_by_uuid(uuid)!);
+            const participant = this.#participant_list.get_participant_by_uuid(uuid)
+            if (participant === undefined) return;
+            this.#add_member(participant);
             (this.#add_member_select.querySelector(`option[value="${uuid}"]`) as HTMLOptionElement).dataset.excluded = '';
             (this.#add_member_select.querySelector('option[selected]') as HTMLOptionElement).selected = true
         }
@@ -1264,6 +1293,14 @@ export namespace Group {
 
         get_linked_participants(): Array<Participant.Uuid> { return this.get_raw_data() }
         get_raw_data(): LinkedGroupRawData { return Array.from(this.#member_list.children, elem => (elem as HTMLElement).dataset.uuid!) }
+        get_typed_raw_data(): GroupRawData {
+            return { type_key: this.type_key, raw_data: this.get_raw_data() }
+        }
+        test_non_empty(): boolean {
+            const raw_data = this.get_raw_data()
+            const uuid_exists = (uuid: Participant.Uuid) => this.#participant_list.get_participant_by_uuid(uuid) !== undefined
+            return raw_data.length > 0 && raw_data.every(uuid_exists)
+        }
         set_from_raw_data(raw_data: LinkedGroupRawData): void {
             this.#member_list.innerHTML = ''
             for (const member_uuid of raw_data.reverse())
@@ -1335,7 +1372,7 @@ export namespace Next {
     }
 
     interface NextEventMap {
-        'update': Event
+        'results_changed': Event
     }
 
     interface ArrangementError extends Error {
@@ -1388,14 +1425,14 @@ export namespace Next {
 
                 this.#exchange_score_ref_year = DEFAULT_YEAR
                 this.#year.addEventListener('change', () => {
-                    this.#update_exchange_score_ref_year(this.#year.value)
-                    this.#root.dispatchEvent(new Event('update'))
+                    this.#update_exchange_score_ref_year(this.#year.value!)
+                    update_data_event(this.#year.get_elem(), { debounce_timeout_ms: 700, max_delay_ms: 1000 })
                 })
                 this.#gift_number.addEventListener('change', () => {
-                    this.#root.dispatchEvent(new Event('update'))
+                    update_data_event(this.#gift_number.get_elem(), { debounce_timeout_ms: 700, max_delay_ms: 1000 })
                 })
                 this.#avoid_two_loop.addEventListener('change', () => {
-                    this.#root.dispatchEvent(new Event('update'))
+                    update_data_event(this.#avoid_two_loop, { debounce_timeout_ms: 500 })
                 })
 
                 const generate_button = element_factory('button', { type: 'button', class: 'generate_button' }, `Générer ▶`)
@@ -1475,7 +1512,7 @@ export namespace Next {
                     noel_button.disabled = disabled
                 }
                 setTimeout(() => {
-                    this.addEventListener('update', evaluate_disabled)
+                    this.addEventListener('results_changed', evaluate_disabled)
                     evaluate_disabled()
                 }, 0)
 
@@ -1602,7 +1639,8 @@ export namespace Next {
         }
         #insert_participants_exclusions(participants_from: Array<Participant.Uuid>, participants_to: Array<Participant.Uuid>) {
             for (const excluded_from_uuid of participants_from) {
-                const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)!
+                const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)
+                if (from_giver === undefined) continue;
                 for (const excluded_to_uuid of participants_to) {
                     if (excluded_from_uuid == excluded_to_uuid) continue;
                     const previous_black_list_count = from_giver.give_to_black_list_count[excluded_to_uuid] || 0
@@ -1614,7 +1652,8 @@ export namespace Next {
         }
         #remove_participants_exclusions(participants_from: Array<Participant.Uuid>, participants_to: Array<Participant.Uuid>) {
             for (const excluded_from_uuid of participants_from) {
-                const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)!
+                const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == excluded_from_uuid)
+                if (from_giver === undefined) continue;
                 for (const excluded_to_uuid of participants_to) {
                     const new_black_list_count = --from_giver.give_to_black_list_count[excluded_to_uuid]
                     if (new_black_list_count == 0) {
@@ -1625,7 +1664,8 @@ export namespace Next {
         }
         #insert_participants_linked(linked_participants: Array<Participant.Uuid>) {
             for (const the_uuid of linked_participants) {
-                const the_giver = this.#giver_datas.find(a_giver => a_giver.uuid == the_uuid)!
+                const the_giver = this.#giver_datas.find(a_giver => a_giver.uuid == the_uuid)
+                if (the_giver === undefined) continue;
                 for (const another_linked_uuid of linked_participants) {
                     if (another_linked_uuid == the_uuid) continue;
                     the_giver.linked_to[another_linked_uuid] = (the_giver.linked_to[another_linked_uuid] || 0) + 1
@@ -1634,7 +1674,8 @@ export namespace Next {
         }
         #remove_participants_linked(linked_participants: Array<Participant.Uuid>) {
             for (const the_uuid of linked_participants) {
-                const the_giver = this.#giver_datas.find(a_giver => a_giver.uuid == the_uuid)!
+                const the_giver = this.#giver_datas.find(a_giver => a_giver.uuid == the_uuid)
+                if (the_giver === undefined) continue;
                 for (const another_linked_uuid of linked_participants) {
                     if (another_linked_uuid == the_uuid) continue;
                     if (--the_giver.linked_to[another_linked_uuid] == 0)
@@ -1646,7 +1687,8 @@ export namespace Next {
             return 1 / (2 ** (this.#exchange_score_ref_year - exchange_year))
         }
         #exchange_add(exchange: History.ExchangeData) {
-            const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == exchange.from_uuid)!
+            const from_giver = this.#giver_datas.find(a_giver => a_giver.uuid == exchange.from_uuid)
+            if (from_giver === undefined) return;
             from_giver.give_to_scores[exchange.to_uuid].add(exchange.uuid, this.#compute_exchange_score(exchange.year))
             this.#sort_give_to(from_giver, exchange.to_uuid)
         }
@@ -1844,10 +1886,10 @@ export namespace Next {
                 this.#set_result(Editor.#find_arrangement(
                     this.#giver_datas,
                     this.#avoid_two_loop.checked,
-                    this.#gift_number.value,
+                    this.#gift_number.value!,
                     this.#participant
                 ))
-                this.#root.dispatchEvent(new Event('update'))
+                update_data_event(this.#next_exchanges_container)
             } catch (error) {
                 if (is_arrangement_error(error as Error)) {
                     this.#error_box.set((error as ArrangementError).message)
@@ -1874,11 +1916,13 @@ export namespace Next {
                     elem.setAttribute('from_equal_to', '')
                 else
                     elem.removeAttribute('from_equal_to')
-                this.#root.dispatchEvent(new Event('update'))
+                this.#root.dispatchEvent(new Event('results_changed'))
+                update_data_event(elem)
             }
             const remove_exchange = () => {
                 elem.remove()
-                this.#root.dispatchEvent(new Event('update'))
+                this.#root.dispatchEvent(new Event('results_changed'))
+                update_data_event(this.#root)
             }
             const picker_selected_got_deleted_handler = () => {
                 if (!from_picker.selectedOptions[0].getAttribute('value') && !to_picker.selectedOptions[0].getAttribute('value'))
@@ -1913,6 +1957,7 @@ export namespace Next {
             this.#next_exchanges_container.innerHTML = ''
             for (const exchange of exchanges)
                 this.#add_result_exchange(exchange.from, exchange.to)
+            this.#root.dispatchEvent(new Event('results_changed'))
         }
         get_result(): Array<{ from: Participant.Uuid, to: Participant.Uuid }> {
             return Array.from(this.#next_exchanges_container.children)
@@ -1936,7 +1981,7 @@ export namespace Next {
             FileSaver.saveAs(blob_csv, `Distribution Noël ${this.#year.value}.csv`, { autoBom: true })
         }
         #download_result_with_history() {
-            const next_year: number = this.#year.value
+            const next_year: number = this.#year.value!
             const future_raw_data: RawData.Agregation = RawData.get_raw_data(this.#participant, this.#history, this.#group, this)
             future_raw_data.next.result.forEach(next_exchange => {
                 future_raw_data.history.push({
@@ -1965,13 +2010,9 @@ export namespace Next {
         }
         set_from_raw_data(raw_data: NextRawData) {
             // Controls
-            if (raw_data.control.year !== undefined) {
-                this.#year.value = raw_data.control.year
-                this.#exchange_score_ref_year = raw_data.control.year
-            }
-            if (raw_data.control.gift_number !== undefined) {
-                this.#gift_number.value = raw_data.control.gift_number
-            }
+            this.#year.value = raw_data.control.year
+            this.#exchange_score_ref_year = this.#year.value!
+            this.#gift_number.value = raw_data.control.gift_number
             this.#avoid_two_loop.checked = raw_data.control.no_two_loop
             // Results
             this.#set_result(raw_data.result)
