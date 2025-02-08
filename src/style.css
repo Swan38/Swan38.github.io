@@ -313,6 +313,7 @@ label.tab_selection > svg {
         grid-column-end: 5;
         pointer-events: none;
         opacity: 0;
+        height: 0;
     }
     #tab_layout:has(input[name="tab_selection"][value="participants"]:checked) .tab_content#container_participants,
     #tab_layout:has(input[name="tab_selection"][value="history"]:checked) .tab_content#container_history,
@@ -320,6 +321,7 @@ label.tab_selection > svg {
     #tab_layout:has(input[name="tab_selection"][value="next_christmas"]:checked) .tab_content#container_next_christmas {
         pointer-events: all;
         opacity: 1;
+        height: unset;
         transition: opacity .5s ease-in-out;
     }
 
