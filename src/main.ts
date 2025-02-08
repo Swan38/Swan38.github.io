@@ -31,7 +31,6 @@ container_next.insertAdjacentElement('beforeend', next.get_elem())
 namespace RawData { // Raw data storage
     const RAW_DATA_KEY = 'noel_data'
     function write_raw_data(raw_data: ComponentRawData.Agregation) {
-        console.log('➕🍪')
         if (raw_data.participants.length > 0)
             Cookie.write(RAW_DATA_KEY, JSON.stringify(raw_data))
         else
@@ -82,13 +81,9 @@ namespace RawData { // Raw data storage
 
             const data_string = JSON.stringify(data)
 
-            if (!Number.isNaN(this.#current_storage_index) && data_string == this.#storage.at(-1)) {
-                console.log('=⌛')
-                return;
-            }
+            if (!Number.isNaN(this.#current_storage_index) && data_string == this.#storage.at(-1)) return;
 
             this.#storage.push(data_string)
-            console.log('➕⌛', data)
 
             if (this.#storage.length > 60)
                 this.#storage.shift()
@@ -125,7 +120,6 @@ namespace RawData { // Raw data storage
                 data = data_history.get_ctrl_y_data()
 
             if (data !== undefined) {
-                console.log('⌛➡', data)
                 ComponentRawData.set_raw_data(
                     data,
                     participant, history, group, next)
@@ -240,8 +234,6 @@ namespace Tutorial { // Tutorial or main app
             Tutorial.leave_tutorial()
         }
         file_reader.readAsText(file, 'utf-8')
-
-        // console.log(`Loading file:`, drop_input.files)
     })
 }
 
